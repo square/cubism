@@ -13,15 +13,16 @@ function cubism_source(context, request) {
         timeout;
 
     function refresh() {
-      var stop = context.stop();
+      var stop = context.stop(), init;
 
-      if (!last) last = offsetTime;
+      if (!last) last = offsetTime, init = true;
       offset = Math.round((context.start() - offsetTime) / step);
 
       request(expression, last, stop, step, function(error, data) {
         if (error) return console.warn(error);
         data.forEach(function(d) { values[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
         last = new Date(stop - cubism_sourceOverlap * step);
+        if (init) context.refresh();
       });
     }
 

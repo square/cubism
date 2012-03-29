@@ -5,14 +5,20 @@ cubism.context = function() {
       step, // milliseconds
       size, // number of steps
       event = d3.dispatch("change", "cancel"),
-      timeout;
+      timeout,
+      refreshTimeout;
 
   setTimeout(rechange, 10);
 
   function change() {
+    refresh();
+    rechange();
+  }
+
+  function refresh() {
+    refreshTimeout = 0;
     rescale();
     event.change.call(context);
-    rechange();
   }
 
   function rechange() {
@@ -75,6 +81,13 @@ cubism.context = function() {
   // If `i` is size, this is equivalent to stop.
   context.timeAt = function(i) {
     return new Date(+start + i * step);
+  };
+
+  // Hasten the next change event, accumulating concurrent updates.
+  // This is typically used only by metrics when new data is available.
+  context.refresh = function() {
+    if (timeout && !refreshTimeout) refreshTimeout = setTimeout(refresh, 250);
+    return context;
   };
 
   // Exposes an `on` method to listen for "change" and "cancel" events.
