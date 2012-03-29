@@ -288,6 +288,7 @@ function cubism_contextConstant(size, value) {
   metric.valueAt = function() { return value; };
   metric.toString = function() { return value + ""; };
   metric.size = function() { return size; };
+  metric.shift = function() { return metric; };
   return metric;
 }
 cubism_context.prototype.horizon = function() {
