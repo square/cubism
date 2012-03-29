@@ -2,21 +2,23 @@ function cubism_source(context, request) {
   var source = {};
 
   source.metric = function(expression) {
-    var metric = [],
-        last,
-        reference,
+    var last,
+        offset,
+        offsetTime = context.start(),
+        step = context.step(),
+        size = context.size(),
+        metric = new Array(size),
         timeout;
 
     function refresh() {
-      var step = context.step(),
-          stop = context.stop(),
-          size = context.size();
+      var stop = context.stop();
 
-      if (!last) last = reference = context.start();
+      if (!last) last = offsetTime;
+      offset = Math.round((context.start() - offsetTime) / step);
 
       request(expression, last, stop, step, function(error, data) {
         if (error) return console.warn(error);
-        data.forEach(function(d) { metric[Math.round((d[0] - reference) / step) % size] = d; });
+        data.forEach(function(d) { metric[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
         last = new Date(stop - cubism_sourceOverlap * step);
       });
     }
@@ -39,7 +41,13 @@ function cubism_source(context, request) {
       timeout = clearTimeout(timeout);
     });
 
-    metric.expression = function() {
+    //
+    metric.valueAt = function(i) {
+      return metric[(i + offset) % size];
+    };
+
+    // Returns the associated metric expression.
+    metric.toString = function() {
       return expression;
     };
 

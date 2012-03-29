@@ -3,7 +3,8 @@ cubism_context.prototype.graphite = function(host) {
 
   if (!arguments.length) host = "";
 
-  source.host = function() {
+  // Returns the graphite host.
+  source.toString = function() {
     return host;
   };
 

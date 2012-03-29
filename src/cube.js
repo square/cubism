@@ -4,7 +4,8 @@ cubism_context.prototype.cube = function(host) {
 
   if (!arguments.length) host = "";
 
-  source.host = function() {
+  // Returns the Cube host.
+  source.toString = function() {
     return host;
   };
 

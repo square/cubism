@@ -4,21 +4,23 @@ function cubism_source(context, request) {
   var source = {};
 
   source.metric = function(expression) {
-    var metric = [],
-        last,
-        reference,
+    var last,
+        offset,
+        offsetTime = context.start(),
+        step = context.step(),
+        size = context.size(),
+        metric = new Array(size),
         timeout;
 
     function refresh() {
-      var step = context.step(),
-          stop = context.stop(),
-          size = context.size();
+      var stop = context.stop();
 
-      if (!last) last = reference = context.start();
+      if (!last) last = offsetTime;
+      offset = Math.round((context.start() - offsetTime) / step);
 
       request(expression, last, stop, step, function(error, data) {
         if (error) return console.warn(error);
-        data.forEach(function(d) { metric[Math.round((d[0] - reference) / step) % size] = d; });
+        data.forEach(function(d) { metric[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
         last = new Date(stop - cubism_sourceOverlap * step);
       });
     }
@@ -41,7 +43,13 @@ function cubism_source(context, request) {
       timeout = clearTimeout(timeout);
     });
 
-    metric.expression = function() {
+    //
+    metric.valueAt = function(i) {
+      return metric[(i + offset) % size];
+    };
+
+    // Returns the associated metric expression.
+    metric.toString = function() {
       return expression;
     };
 
@@ -59,7 +67,8 @@ cubism_context.prototype.cube = function(host) {
 
   if (!arguments.length) host = "";
 
-  source.host = function() {
+  // Returns the Cube host.
+  source.toString = function() {
     return host;
   };
 
@@ -81,7 +90,8 @@ cubism_context.prototype.graphite = function(host) {
 
   if (!arguments.length) host = "";
 
-  source.host = function() {
+  // Returns the graphite host.
+  source.toString = function() {
     return host;
   };
 
@@ -146,18 +156,24 @@ cubism.context = function() {
     return context;
   }
 
+  // Returns the start time of the context (inclusive).
   context.start = function() {
     return start;
   };
 
+  // Returns the stop time of the context (exclusive).
   context.stop = function() {
     return stop;
   };
 
+  // Returns the delay in milliseconds until the next change.
   context.delay = function() {
     return +stop + step - Date.now();
   };
 
+  // Set or get the step interval in milliseconds.
+  // The step interval cannot be changed after the context is started.
+  // Defaults to 10 seconds.
   context.step = function(_) {
     if (!arguments.length) return step;
     if (timeout) throw new Error("step cannot be changed mid-flight");
@@ -165,6 +181,9 @@ cubism.context = function() {
     return rescale();
   };
 
+  // Set or get the context size (the count of metric values).
+  // The size cannot be changed after the context is started.
+  // Defaults to 1440 (4 hours at 10 seconds).
   context.size = function(_) {
     if (!arguments.length) return size;
     if (timeout) throw new Error("size cannot be changed mid-flight");
@@ -172,6 +191,7 @@ cubism.context = function() {
     return rescale();
   };
 
+  // Disposes this context, cancelling any subsequent updates.
   context.cancel = function() {
     if (timeout) {
       timeout = clearTimeout(timeout);
@@ -180,6 +200,14 @@ cubism.context = function() {
     return context;
   };
 
+  // Returns the time at the specified index `i`.
+  // If `i` is zero, this is equivalent to start.
+  // If `i` is size, this is equivalent to stop.
+  context.timeAt = function(i) {
+    return new Date(+start + i * step);
+  };
+
+  // Exposes an `on` method to listen for "change" and "cancel" events.
   d3.rebind(context, event, "on");
 
   return context.step(1e4).size(1440); // 4 hours at 10 seconds
