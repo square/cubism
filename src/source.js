@@ -66,7 +66,7 @@ function cubism_source(context, request) {
     //
     metric.shift = function(from, to) {
       if (typeof from !== "function" || typeof to !== "function") {
-        if (arguments.length < 2) var field = "time", value = from;
+        if (arguments.length < 2) var field = "milliseconds", value = from;
         else var field = from, value = to;
         from = cubism_shift[field](+value);
         to = cubism_shift[field](-value);

@@ -78,7 +78,7 @@ function cubism_source(context, request) {
     //
     metric.shift = function(from, to) {
       if (typeof from !== "function" || typeof to !== "function") {
-        if (arguments.length < 2) var field = "time", value = from;
+        if (arguments.length < 2) var field = "milliseconds", value = from;
         else var field = from, value = to;
         from = cubism_shift[field](+value);
         to = cubism_shift[field](-value);
@@ -123,7 +123,7 @@ function cubism_metricComposer(name, operator) {
     metric.valueAt = function(i) { return operator(a.valueAt(i), b.valueAt(i)); };
     metric.toString = function() { return a + " " + name + " " + b; };
     metric.size = a.size;
-    metric.shift = function(offset) { return compose(a.shift(offset), b.shift(offset)); };
+    metric.shift = function() { return compose(a.shift.apply(a, arguments), b.shift.apply(b, arguments)); };
     return metric;
   };
 }
