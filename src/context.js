@@ -84,3 +84,17 @@ cubism.context = function() {
 };
 
 function cubism_context() {}
+
+cubism_context.prototype.constant = function(value) {
+  return cubism_contextConstant(this.size(), value);
+};
+
+function cubism_contextConstant(size, value) {
+  value = +value, size = +size;
+  var metric = new cubism_metric;
+  metric.extent = function() { return [value, value]; };
+  metric.valueAt = function() { return value; };
+  metric.toString = function() { return value + ""; };
+  metric.size = function() { return size; };
+  return metric;
+}
