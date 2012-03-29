@@ -1,0 +1,17 @@
+{
+  "name": "cubism",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/square/cubism.git"
+  },
+  "dependencies": {
+    "d3": "2.8.1"
+  },
+  "devDependencies": {
+    "vows": "0.6.1",
+    "uglify-js": "1.2.5"
+  }
+}
