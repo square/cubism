@@ -1,5 +1,4 @@
 cubism.cube = function(host) {
-
   if (!arguments.length) host = "";
   var iso = d3.time.format.iso;
 

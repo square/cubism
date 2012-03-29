@@ -4,12 +4,13 @@ function cubism_source(request) {
   var source = {};
 
   source.metric = function(context, expression) {
-    var last,
+    var metric = new cubism_metric,
+        last,
         offset,
         offsetTime = context.start(),
         step = context.step(),
         size = context.size(),
-        metric = new Array(size),
+        values = new Array(size),
         timeout;
 
     function refresh() {
@@ -20,7 +21,7 @@ function cubism_source(request) {
 
       request(expression, last, stop, step, function(error, data) {
         if (error) return console.warn(error);
-        data.forEach(function(d) { metric[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
+        data.forEach(function(d) { values[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
         last = new Date(stop - cubism_sourceOverlap * step);
       });
     }
@@ -44,8 +45,18 @@ function cubism_source(request) {
     });
 
     //
+    metric.size = function() {
+      return size;
+    };
+
+    //
+    metric.extent = function() {
+      return d3.extent(values);
+    };
+
+    //
     metric.valueAt = function(i) {
-      return metric[(i + offset) % size];
+      return values[(i + offset) % size];
     };
 
     // Returns the associated metric expression.
@@ -61,8 +72,8 @@ function cubism_source(request) {
 
 // Number of metric to refetch each period, in case of lag.
 var cubism_sourceOverlap = 6;
+function cubism_metric() {}
 cubism.cube = function(host) {
-
   if (!arguments.length) host = "";
   var iso = d3.time.format.iso;
 
@@ -223,4 +234,69 @@ cubism.context = function() {
 };
 
 function cubism_context() {}
+cubism_metric.prototype.add = function(b) {
+  return cubism_add(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
+};
+
+function cubism_add(a, b) {
+  if (a.size() !== b.size()) throw new Error("different size!");
+  var metric = new cubism_metric;
+  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
+  metric.valueAt = function(i) { return a.valueAt(i) + b.valueAt(i); };
+  metric.toString = function() { return a + " + " + b; };
+  metric.size = a.size;
+  return metric;
+};
+cubism_metric.prototype.subtract = function(b) {
+  return cubism_subtract(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
+};
+
+function cubism_subtract(a, b) {
+  if (a.size() !== b.size()) throw new Error("different size!");
+  var metric = new cubism_metric;
+  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
+  metric.valueAt = function(i) { return a.valueAt(i) - b.valueAt(i); };
+  metric.toString = function() { return a + " - " + b; };
+  metric.size = a.size;
+  return metric;
+};
+cubism_metric.prototype.multiply = function(b) {
+  return cubism_multiply(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
+};
+
+function cubism_multiply(a, b) {
+  if (a.size() !== b.size()) throw new Error("different size!");
+  var metric = new cubism_metric;
+  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
+  metric.valueAt = function(i) { return a.valueAt(i) * b.valueAt(i); };
+  metric.toString = function() { return a + " * " + b; };
+  metric.size = a.size;
+  return metric;
+};
+cubism_metric.prototype.divide = function(b) {
+  return cubism_divide(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
+};
+
+function cubism_divide(a, b) {
+  if (a.size() !== b.size()) throw new Error("different size!");
+  var metric = new cubism_metric;
+  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
+  metric.valueAt = function(i) { return a.valueAt(i) / b.valueAt(i); };
+  metric.toString = function() { return a + " / " + b; };
+  metric.size = a.size;
+  return metric;
+};
+cubism_context.prototype.constant = function(value) {
+  return cubism_constant(this.size(), value);
+};
+
+function cubism_constant(size, value) {
+  value = +value, size = +size;
+  var metric = new cubism_metric;
+  metric.extent = function() { return [value, value]; };
+  metric.valueAt = function() { return value; };
+  metric.toString = function() { return value + ""; };
+  metric.size = function() { return size; };
+  return metric;
+}
 })(this);

@@ -1,0 +1,1 @@
+function cubism_metric() {}

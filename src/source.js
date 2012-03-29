@@ -2,12 +2,13 @@ function cubism_source(request) {
   var source = {};
 
   source.metric = function(context, expression) {
-    var last,
+    var metric = new cubism_metric,
+        last,
         offset,
         offsetTime = context.start(),
         step = context.step(),
         size = context.size(),
-        metric = new Array(size),
+        values = new Array(size),
         timeout;
 
     function refresh() {
@@ -18,7 +19,7 @@ function cubism_source(request) {
 
       request(expression, last, stop, step, function(error, data) {
         if (error) return console.warn(error);
-        data.forEach(function(d) { metric[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
+        data.forEach(function(d) { values[Math.round((d[0] - offsetTime) / step) % size] = d[1]; });
         last = new Date(stop - cubism_sourceOverlap * step);
       });
     }
@@ -42,8 +43,18 @@ function cubism_source(request) {
     });
 
     //
+    metric.size = function() {
+      return size;
+    };
+
+    //
+    metric.extent = function() {
+      return d3.extent(values);
+    };
+
+    //
     metric.valueAt = function(i) {
-      return metric[(i + offset) % size];
+      return values[(i + offset) % size];
     };
 
     // Returns the associated metric expression.
