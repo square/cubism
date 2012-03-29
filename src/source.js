@@ -3,6 +3,7 @@ function cubism_source(request) {
 
   source.metric = function(context, expression) {
     var metric = new cubism_metric,
+        id = ++cubism_metricId,
         last,
         offset,
         offsetTime = context.start(),
@@ -32,13 +33,13 @@ function cubism_source(request) {
     if (delay > 1000) timeout = setTimeout(refresh, delay);
 
     // When the context changes, delay the request for a half-interval.
-    context.on("change", function() {
+    context.on("change.metric-" + id, function() {
       if (timeout) clearTimeout(timeout);
       timeout = setTimeout(refresh, context.step() / 2);
     });
 
     // When the context is closed, cancel any pending refresh.
-    context.on("cancel", function() {
+    context.on("cancel.metric-" + id, function() {
       timeout = clearTimeout(timeout);
     });
 
