@@ -1,7 +1,7 @@
-cubism.graphite = function(host) {
+cubism_context.prototype.graphite = function(host) {
   if (!arguments.length) host = "";
 
-  var source = cubism_source(function(expression, start, stop, step, callback) {
+  var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.text(host + "/render?format=raw"
         + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
         + "&from=" + cubism_graphiteFormatDate(start - 2 * step)

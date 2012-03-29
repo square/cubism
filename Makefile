@@ -8,16 +8,12 @@ all: cubism.min.js package.json
 cubism.js: \
 	src/cubism.js \
 	src/identity.js \
+	src/shift.js \
 	src/source.js \
 	src/metric.js \
 	src/cube.js \
 	src/graphite.js \
 	src/context.js \
-	src/add.js \
-	src/subtract.js \
-	src/multiply.js \
-	src/divide.js \
-	src/constant.js \
 	src/horizon.js \
 	Makefile
 

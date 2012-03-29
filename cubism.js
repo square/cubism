@@ -1,10 +1,19 @@
 (function(exports){
 var cubism = exports.cubism = {version: "0.0.1"};
 function cubism_identity(d) { return d; }
-function cubism_source(request) {
+var cubism_shift = {
+  milliseconds: function(v) { v = +v; return function(d) { return new Date(+d + v); }; },
+  second: function(v) { v *= 1e3; return function(d) { return new Date(+d + v); }; },
+  minute: function(v) { v *= 6e4; return function(d) { return new Date(+d + v); }; },
+  hour: function(v) { v = +v; return function(d) { d = new Date(+d); d.setHours(d.getHours() + v); return d; }; },
+  day: function(v) { v = +v; return function(d) { d = new Date(+d); d.setDate(d.getDate() + v); return d; }; },
+  month: function(v) { v = +v; return function(d) { d = new Date(+d); d.setMonths(d.getMonths() + v); return d; }; },
+  year: function(v) { v = +v; return function(d) { d = new Date(+d); d.setFullYear(d.getFullYear() + v); return d; }; }
+};
+function cubism_source(context, request) {
   var source = {};
 
-  source.metric = function(context, expression) {
+  source.metric = function(expression) {
     var metric = new cubism_metric,
         id = ++cubism_metricId,
         last,
@@ -66,6 +75,17 @@ function cubism_source(request) {
       return expression;
     };
 
+    //
+    metric.shift = function(from, to) {
+      if (typeof from !== "function" || typeof to !== "function") {
+        if (arguments.length < 2) var field = "time", value = from;
+        else var field = from, value = to;
+        from = cubism_shift[field](+value);
+        to = cubism_shift[field](-value);
+      }
+      return cubism_source(context, cubism_sourceShift(request, from, to)).metric(expression);
+    };
+
     return metric;
   };
 
@@ -74,14 +94,58 @@ function cubism_source(request) {
 
 // Number of metric to refetch each period, in case of lag.
 var cubism_sourceOverlap = 6;
+
+// Wraps the specified request implementation, and shifts time by the given offset.
+function cubism_sourceShift(request, from, to) {
+  return function(expression, start, stop, step, callback) {
+    request(expression, from(start), from(stop), step, function(error, data) {
+      if (data) data = data.map(function(d) { return [to(d[0]), d[1]]; });
+      callback(error, data);
+    });
+  };
+}
 function cubism_metric() {}
 
 var cubism_metricId = 0;
-cubism.cube = function(host) {
+
+cubism_metric.prototype.add = cubism_metricComposer("+", function(a, b) { return a + b; });
+cubism_metric.prototype.subtract = cubism_metricComposer("-", function(a, b) { return a - b; });
+cubism_metric.prototype.multiply = cubism_metricComposer("*", function(a, b) { return a * b; });
+cubism_metric.prototype.divide = cubism_metricComposer("/", function(a, b) { return a / b; });
+
+cubism_context.prototype.constant = function(value) {
+  return cubism_metricConstant(this.size(), value);
+};
+
+function cubism_metricConstant(size, value) {
+  value = +value, size = +size;
+  var metric = new cubism_metric;
+  metric.extent = function() { return [value, value]; };
+  metric.valueAt = function() { return value; };
+  metric.toString = function() { return value + ""; };
+  metric.size = function() { return size; };
+  return metric;
+}
+
+function cubism_metricComposer(name, operator) {
+  return function compose(b) {
+    var a = this;
+    if (!(b instanceof cubism_metric)) b = cubism_metricConstant(a.size(), b);
+    if (a.size() !== b.size()) throw new Error("different size!");
+    var metric = new cubism_metric;
+    metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
+    metric.valueAt = function(i) { return operator(a.valueAt(i), b.valueAt(i)); };
+    metric.toString = function() { return a + " " + name + " " + b; };
+    metric.size = a.size;
+    metric.shift = function(offset) { return compose(a.shift(offset), b.shift(offset)); };
+    return metric;
+  };
+}
+cubism_context.prototype.cube = function(host) {
   if (!arguments.length) host = "";
   var iso = d3.time.format.iso;
 
-  var source = cubism_source(function(expression, start, stop, step, callback) {
+  var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + iso(start)
@@ -99,10 +163,10 @@ cubism.cube = function(host) {
 
   return source;
 };
-cubism.graphite = function(host) {
+cubism_context.prototype.graphite = function(host) {
   if (!arguments.length) host = "";
 
-  var source = cubism_source(function(expression, start, stop, step, callback) {
+  var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.text(host + "/render?format=raw"
         + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
         + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
@@ -203,18 +267,6 @@ cubism.context = function() {
     return rescale();
   };
 
-  // Returns a context shifted by the specified offset in milliseconds.
-  context.shift = function(offset) {
-    var shift = new cubism_context;
-    shift.start = function() { return new Date(+start + offset); };
-    shift.stop = function() { return new Date(+stop + offset); };
-    shift.delay = context.delay;
-    shift.step = function() { return step; };
-    shift.size = function() { return size; };
-    shift.timeAt = function(i) { return new Date(+start + i * step + offset); };
-    return d3.rebind(shift, event, "on");
-  };
-
   // Disposes this context, cancelling any subsequent updates.
   context.cancel = function() {
     if (timeout) {
@@ -238,71 +290,6 @@ cubism.context = function() {
 };
 
 function cubism_context() {}
-cubism_metric.prototype.add = function(b) {
-  return cubism_add(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
-};
-
-function cubism_add(a, b) {
-  if (a.size() !== b.size()) throw new Error("different size!");
-  var metric = new cubism_metric;
-  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
-  metric.valueAt = function(i) { return a.valueAt(i) + b.valueAt(i); };
-  metric.toString = function() { return a + " + " + b; };
-  metric.size = a.size;
-  return metric;
-};
-cubism_metric.prototype.subtract = function(b) {
-  return cubism_subtract(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
-};
-
-function cubism_subtract(a, b) {
-  if (a.size() !== b.size()) throw new Error("different size!");
-  var metric = new cubism_metric;
-  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
-  metric.valueAt = function(i) { return a.valueAt(i) - b.valueAt(i); };
-  metric.toString = function() { return a + " - " + b; };
-  metric.size = a.size;
-  return metric;
-};
-cubism_metric.prototype.multiply = function(b) {
-  return cubism_multiply(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
-};
-
-function cubism_multiply(a, b) {
-  if (a.size() !== b.size()) throw new Error("different size!");
-  var metric = new cubism_metric;
-  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
-  metric.valueAt = function(i) { return a.valueAt(i) * b.valueAt(i); };
-  metric.toString = function() { return a + " * " + b; };
-  metric.size = a.size;
-  return metric;
-};
-cubism_metric.prototype.divide = function(b) {
-  return cubism_divide(this, b instanceof cubism_metric ? b : cubism_constant(this.size(), b));
-};
-
-function cubism_divide(a, b) {
-  if (a.size() !== b.size()) throw new Error("different size!");
-  var metric = new cubism_metric;
-  metric.extent = function() { return d3.extent(d3.range(a.size()), metric.valueAt); };
-  metric.valueAt = function(i) { return a.valueAt(i) / b.valueAt(i); };
-  metric.toString = function() { return a + " / " + b; };
-  metric.size = a.size;
-  return metric;
-};
-cubism_context.prototype.constant = function(value) {
-  return cubism_constant(this.size(), value);
-};
-
-function cubism_constant(size, value) {
-  value = +value, size = +size;
-  var metric = new cubism_metric;
-  metric.extent = function() { return [value, value]; };
-  metric.valueAt = function() { return value; };
-  metric.toString = function() { return value + ""; };
-  metric.size = function() { return size; };
-  return metric;
-}
 cubism_context.prototype.horizon = function() {
   var mode = "offset",
       width = this.size(),

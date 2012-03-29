@@ -1,8 +1,8 @@
-cubism.cube = function(host) {
+cubism_context.prototype.cube = function(host) {
   if (!arguments.length) host = "";
   var iso = d3.time.format.iso;
 
-  var source = cubism_source(function(expression, start, stop, step, callback) {
+  var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + iso(start)
