@@ -124,7 +124,7 @@ function cubism_metricComposer(name, operator) {
     metric.valueAt = function(i) { return operator(a.valueAt(i), b.valueAt(i)); };
     metric.toString = function() { return a + " " + name + " " + b; };
     metric.size = a.size;
-    metric.shift = function() { return compose(a.shift.apply(a, arguments), b.shift.apply(b, arguments)); };
+    metric.shift = function() { return compose.call(a.shift.apply(a, arguments), b.shift.apply(b, arguments)); };
     return metric;
   };
 }
