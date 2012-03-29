@@ -16,9 +16,7 @@ cubism.context = function() {
   }
 
   function rechange() {
-    var delay = +stop + step - Date.now();
-    if (delay < step / 2) delay += step;
-    timeout = setTimeout(change, delay);
+    timeout = setTimeout(change, +stop + step - Date.now());
   }
 
   function rescale() {
@@ -51,8 +49,10 @@ cubism.context = function() {
   };
 
   context.cancel = function() {
-    timeout = clearTimeout(timeout);
-    event.cancel.call(context);
+    if (timeout) {
+      timeout = clearTimeout(timeout);
+      event.cancel.call(context);
+    }
     return context;
   };
 

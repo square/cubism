@@ -1,107 +1,30 @@
 (function(exports){
 var cubism = exports.cubism = {version: "0.0.1"};
-cubism_context.prototype.cube = function(host) {
-  return new cubism_cube(this, arguments.length ? host : "");
-};
+function cubism_source(context, request) {
+  var source = {};
 
-function cubism_cube(context, host) {
-  var cube = {},
-      iso = d3.time.format.iso;
-
-  cube.host = function() {
-    return host;
-  };
-
-  cube.metric = function(expression) {
+  source.metric = function(expression) {
     var metric = [],
-        socket = new WebSocket(host + "/1.0/metric/get"),
-        event = d3.dispatch("change"),
-        reference,
-        overlap = 6;
-
-    function refresh() {
-      var start = context.start(),
-          stop = context.stop(),
-          step = context.step(),
-          size = context.size();
-
-      if (!reference) reference = start;
-      else start = new Date(stop - overlap * step);
-
-      socket.send(JSON.stringify({
-        expression: expression,
-        start: iso(start),
-        stop: iso(stop),
-        step: step
-      }));
-
-      socket.onmessage = function(message) {
-        var d = JSON.parse(message.data);
-        d = [iso.parse(d.time), d.value];
-        metric[Math.round((d[0] - reference) / step) % size] = d;
-        event.change.call(metric, [d]);
-      };
-    }
-
-    socket.onopen = refresh;
-
-    metric.expression = function() {
-      return expression;
-    };
-
-    context
-        .on("change", refresh)
-        .on("cancel", function() { socket.close(); });
-
-    d3.rebind(metric, event, "on");
-
-    return metric;
-  };
-
-  return cube;
-}
-cubism_context.prototype.graphite = function(host) {
-  return new cubism_graphite(this, arguments.length ? host : "");
-};
-
-function cubism_graphite(context, host) {
-  var graphite = {};
-
-  graphite.host = function() {
-    return host;
-  };
-
-  graphite.metric = function(expression) {
-    var metric = [],
-        event = d3.dispatch("change"),
         last,
         reference,
-        overlap = 6,
         timeout;
+
+    function refresh() {
+      var step = context.step(),
+          stop = context.stop(),
+          size = context.size();
+
+      if (!last) last = reference = context.start();
+
+      request(expression, last, stop, step, function(error, data) {
+        if (error) return console.warn(error);
+        data.forEach(function(d) { metric[Math.round((d[0] - reference) / step) % size] = d; });
+        last = new Date(stop - cubism_sourceOverlap * step);
+      });
+    }
 
     // Start polling after stabilizing.
     setTimeout(refresh, 10);
-
-    function refresh() {
-      var start = context.start(),
-          stop = context.stop(),
-          step = context.step(),
-          size = context.size();
-
-      if (!last) last = reference = start;
-
-      d3.text(host + "/render?format=raw"
-          + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
-          + "&from=" + cubism_graphiteFormatDate(last - 2 * step)
-          + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
-        if (text) {
-          var data = cubism_graphiteParse(text);
-          data.forEach(function(d) { metric[Math.round((d[0] - reference) / step) % size] = d; });
-          last = new Date(stop - overlap * step);
-          event.change.call(metric, data);
-        }
-      });
-    }
 
     // When the context changes, delay the request for a half-interval.
     context.on("change", function() {
@@ -109,17 +32,67 @@ function cubism_graphite(context, host) {
       timeout = setTimeout(refresh, context.step() / 2);
     });
 
+    // When the context is closed, cancel any pending refresh.
+    context.on("cancel", function() {
+      timeout = clearTimeout(timeout);
+    });
+
     metric.expression = function() {
       return expression;
     };
 
-    d3.rebind(metric, event, "on");
-
     return metric;
   };
 
-  return graphite;
+  return source;
 }
+
+// Number of metric to refetch each period, in case of lag.
+var cubism_sourceOverlap = 6;
+cubism_context.prototype.cube = function(host) {
+  var source = cubism_source(this, request),
+      iso = d3.time.format.iso;
+
+  if (!arguments.length) host = "";
+
+  source.host = function() {
+    return host;
+  };
+
+  function request(expression, start, stop, step, callback) {
+    d3.json(host + "/1.0/metric"
+        + "?expression=" + encodeURIComponent(expression)
+        + "&start=" + iso(start)
+        + "&stop=" + iso(stop)
+        + "&step=" + step, function(data) {
+      if (!data) return callback(new Error("unable to load data"));
+      callback(null, data.map(function(d) { return [iso.parse(d.time), d.value]; }));
+    });
+  }
+
+  return source;
+};
+cubism_context.prototype.graphite = function(host) {
+  var source = cubism_source(this, request);
+
+  if (!arguments.length) host = "";
+
+  source.host = function() {
+    return host;
+  };
+
+  function request(expression, start, stop, step, callback) {
+    d3.text(host + "/render?format=raw"
+        + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
+        + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
+        + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
+      if (!text) return callback(new Error("unable to load data"));
+      callback(null, cubism_graphiteParse(text));
+    });
+  }
+
+  return source;
+};
 
 // Graphite understands seconds since UNIX epoch.
 function cubism_graphiteFormatDate(time) {
@@ -159,9 +132,7 @@ cubism.context = function() {
   }
 
   function rechange() {
-    var delay = +stop + step - Date.now();
-    if (delay < step / 2) delay += step;
-    timeout = setTimeout(change, delay);
+    timeout = setTimeout(change, +stop + step - Date.now());
   }
 
   function rescale() {
@@ -194,8 +165,10 @@ cubism.context = function() {
   };
 
   context.cancel = function() {
-    timeout = clearTimeout(timeout);
-    event.cancel.call(context);
+    if (timeout) {
+      timeout = clearTimeout(timeout);
+      event.cancel.call(context);
+    }
     return context;
   };
 

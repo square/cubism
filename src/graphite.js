@@ -1,63 +1,24 @@
 cubism_context.prototype.graphite = function(host) {
-  return new cubism_graphite(this, arguments.length ? host : "");
-};
+  var source = cubism_source(this, request);
 
-function cubism_graphite(context, host) {
-  var graphite = {};
+  if (!arguments.length) host = "";
 
-  graphite.host = function() {
+  source.host = function() {
     return host;
   };
 
-  graphite.metric = function(expression) {
-    var metric = [],
-        event = d3.dispatch("change"),
-        last,
-        reference,
-        overlap = 6,
-        timeout;
-
-    // Start polling after stabilizing.
-    setTimeout(refresh, 10);
-
-    function refresh() {
-      var start = context.start(),
-          stop = context.stop(),
-          step = context.step(),
-          size = context.size();
-
-      if (!last) last = reference = start;
-
-      d3.text(host + "/render?format=raw"
-          + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
-          + "&from=" + cubism_graphiteFormatDate(last - 2 * step)
-          + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
-        if (text) {
-          var data = cubism_graphiteParse(text);
-          data.forEach(function(d) { metric[Math.round((d[0] - reference) / step) % size] = d; });
-          last = new Date(stop - overlap * step);
-          event.change.call(metric, data);
-        }
-      });
-    }
-
-    // When the context changes, delay the request for a half-interval.
-    context.on("change", function() {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(refresh, context.step() / 2);
+  function request(expression, start, stop, step, callback) {
+    d3.text(host + "/render?format=raw"
+        + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
+        + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
+        + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
+      if (!text) return callback(new Error("unable to load data"));
+      callback(null, cubism_graphiteParse(text));
     });
+  }
 
-    metric.expression = function() {
-      return expression;
-    };
-
-    d3.rebind(metric, event, "on");
-
-    return metric;
-  };
-
-  return graphite;
-}
+  return source;
+};
 
 // Graphite understands seconds since UNIX epoch.
 function cubism_graphiteFormatDate(time) {

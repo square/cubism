@@ -7,6 +7,7 @@ all: cubism.min.js package.json
 
 cubism.js: \
 	src/cubism.js \
+	src/source.js \
 	src/cube.js \
 	src/graphite.js \
 	src/context.js \
