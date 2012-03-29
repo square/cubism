@@ -296,10 +296,10 @@ cubism_context.prototype.horizon = function() {
       width = this.size(),
       height = 40,
       metric = cubism_identity,
+      extent = null,
       title = cubism_identity,
       format = d3.format(".2s");
 
-  // TODO configurable extent
   // TODO configurable positive colors
   // TODO configurable negative colors
   // TODO configurable bands
@@ -311,6 +311,7 @@ cubism_context.prototype.horizon = function() {
           tspan = div.select(".title"),
           vspan = div.select(".value"),
           metric_ = typeof metric === "function" ? metric.call(this, d, i) : metric,
+          extent_ = typeof extent === "function" ? extent.call(this, d, i) : extent,
           title_ = typeof title === "function" ? title.call(this, d, i) : title;
 
       if (canvas.empty()) {
@@ -319,8 +320,10 @@ cubism_context.prototype.horizon = function() {
         vspan = div.append("span").attr("class", "value");
       }
 
+      if (extent_ == null) extent_ = metric_.extent();
+
       var y = d3.scale.linear()
-          .domain([0, Math.max(-metric_.extent()[0], metric_.extent()[1])])
+          .domain([0, Math.max(-extent_[0], extent_[1])])
           .rangeRound([height, 0]);
 
       var context = canvas.node().getContext("2d");
@@ -368,6 +371,12 @@ cubism_context.prototype.horizon = function() {
   horizon.metric = function(_) {
     if (!arguments.length) return metric;
     metric = _;
+    return horizon;
+  };
+
+  horizon.extent = function(_) {
+    if (!arguments.length) return extent;
+    extent = _;
     return horizon;
   };
 
