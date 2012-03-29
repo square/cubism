@@ -24,6 +24,10 @@ function cubism_source(context, request) {
     // Start polling after stabilizing.
     setTimeout(refresh, 10);
 
+    // Queue up a refresh at the first half-interval.
+    var delay = context.delay() - context.step() / 2;
+    if (delay > 1000) timeout = setTimeout(refresh, delay);
+
     // When the context changes, delay the request for a half-interval.
     context.on("change", function() {
       if (timeout) clearTimeout(timeout);

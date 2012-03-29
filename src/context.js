@@ -16,7 +16,7 @@ cubism.context = function() {
   }
 
   function rechange() {
-    timeout = setTimeout(change, +stop + step - Date.now());
+    timeout = setTimeout(change, context.delay());
   }
 
   function rescale() {
@@ -32,6 +32,10 @@ cubism.context = function() {
 
   context.stop = function() {
     return stop;
+  };
+
+  context.delay = function() {
+    return +stop + step - Date.now();
   };
 
   context.step = function(_) {

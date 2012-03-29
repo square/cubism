@@ -26,6 +26,10 @@ function cubism_source(context, request) {
     // Start polling after stabilizing.
     setTimeout(refresh, 10);
 
+    // Queue up a refresh at the first half-interval.
+    var delay = context.delay() - context.step() / 2;
+    if (delay > 1000) timeout = setTimeout(refresh, delay);
+
     // When the context changes, delay the request for a half-interval.
     context.on("change", function() {
       if (timeout) clearTimeout(timeout);
@@ -132,7 +136,7 @@ cubism.context = function() {
   }
 
   function rechange() {
-    timeout = setTimeout(change, +stop + step - Date.now());
+    timeout = setTimeout(change, context.delay());
   }
 
   function rescale() {
@@ -148,6 +152,10 @@ cubism.context = function() {
 
   context.stop = function() {
     return stop;
+  };
+
+  context.delay = function() {
+    return +stop + step - Date.now();
   };
 
   context.step = function(_) {
