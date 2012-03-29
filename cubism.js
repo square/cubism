@@ -1,9 +1,9 @@
 (function(exports){
 var cubism = exports.cubism = {version: "0.0.1"};
-function cubism_source(context, request) {
+function cubism_source(request) {
   var source = {};
 
-  source.metric = function(expression) {
+  source.metric = function(context, expression) {
     var last,
         offset,
         offsetTime = context.start(),
@@ -61,18 +61,12 @@ function cubism_source(context, request) {
 
 // Number of metric to refetch each period, in case of lag.
 var cubism_sourceOverlap = 6;
-cubism_context.prototype.cube = function(host) {
-  var source = cubism_source(this, request),
-      iso = d3.time.format.iso;
+cubism.cube = function(host) {
 
   if (!arguments.length) host = "";
+  var iso = d3.time.format.iso;
 
-  // Returns the Cube host.
-  source.toString = function() {
-    return host;
-  };
-
-  function request(expression, start, stop, step, callback) {
+  var source = cubism_source(function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + iso(start)
@@ -81,21 +75,19 @@ cubism_context.prototype.cube = function(host) {
       if (!data) return callback(new Error("unable to load data"));
       callback(null, data.map(function(d) { return [iso.parse(d.time), d.value]; }));
     });
-  }
+  });
 
-  return source;
-};
-cubism_context.prototype.graphite = function(host) {
-  var source = cubism_source(this, request);
-
-  if (!arguments.length) host = "";
-
-  // Returns the graphite host.
+  // Returns the Cube host.
   source.toString = function() {
     return host;
   };
 
-  function request(expression, start, stop, step, callback) {
+  return source;
+};
+cubism.graphite = function(host) {
+  if (!arguments.length) host = "";
+
+  var source = cubism_source(function(expression, start, stop, step, callback) {
     d3.text(host + "/render?format=raw"
         + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
         + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
@@ -103,7 +95,12 @@ cubism_context.prototype.graphite = function(host) {
       if (!text) return callback(new Error("unable to load data"));
       callback(null, cubism_graphiteParse(text));
     });
-  }
+  });
+
+  // Returns the graphite host.
+  source.toString = function() {
+    return host;
+  };
 
   return source;
 };
@@ -189,6 +186,18 @@ cubism.context = function() {
     if (timeout) throw new Error("size cannot be changed mid-flight");
     size = +_;
     return rescale();
+  };
+
+  // Returns a context shifted by the specified offset in milliseconds.
+  context.shift = function(offset) {
+    var shift = new cubism_context;
+    shift.start = function() { return new Date(+start + offset); };
+    shift.stop = function() { return new Date(+stop + offset); };
+    shift.delay = context.delay;
+    shift.step = function() { return step; };
+    shift.size = function() { return size; };
+    shift.timeAt = function(i) { return new Date(+start + i * step + offset); };
+    return d3.rebind(shift, event, "on");
   };
 
   // Disposes this context, cancelling any subsequent updates.

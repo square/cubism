@@ -1,14 +1,7 @@
-cubism_context.prototype.graphite = function(host) {
-  var source = cubism_source(this, request);
-
+cubism.graphite = function(host) {
   if (!arguments.length) host = "";
 
-  // Returns the graphite host.
-  source.toString = function() {
-    return host;
-  };
-
-  function request(expression, start, stop, step, callback) {
+  var source = cubism_source(function(expression, start, stop, step, callback) {
     d3.text(host + "/render?format=raw"
         + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
         + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
@@ -16,7 +9,12 @@ cubism_context.prototype.graphite = function(host) {
       if (!text) return callback(new Error("unable to load data"));
       callback(null, cubism_graphiteParse(text));
     });
-  }
+  });
+
+  // Returns the graphite host.
+  source.toString = function() {
+    return host;
+  };
 
   return source;
 };

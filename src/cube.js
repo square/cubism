@@ -1,15 +1,9 @@
-cubism_context.prototype.cube = function(host) {
-  var source = cubism_source(this, request),
-      iso = d3.time.format.iso;
+cubism.cube = function(host) {
 
   if (!arguments.length) host = "";
+  var iso = d3.time.format.iso;
 
-  // Returns the Cube host.
-  source.toString = function() {
-    return host;
-  };
-
-  function request(expression, start, stop, step, callback) {
+  var source = cubism_source(function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + iso(start)
@@ -18,7 +12,12 @@ cubism_context.prototype.cube = function(host) {
       if (!data) return callback(new Error("unable to load data"));
       callback(null, data.map(function(d) { return [iso.parse(d.time), d.value]; }));
     });
-  }
+  });
+
+  // Returns the Cube host.
+  source.toString = function() {
+    return host;
+  };
 
   return source;
 };

@@ -1,7 +1,7 @@
-function cubism_source(context, request) {
+function cubism_source(request) {
   var source = {};
 
-  source.metric = function(expression) {
+  source.metric = function(context, expression) {
     var last,
         offset,
         offsetTime = context.start(),

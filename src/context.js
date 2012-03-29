@@ -61,6 +61,18 @@ cubism.context = function() {
     return rescale();
   };
 
+  // Returns a context shifted by the specified offset in milliseconds.
+  context.shift = function(offset) {
+    var shift = new cubism_context;
+    shift.start = function() { return new Date(+start + offset); };
+    shift.stop = function() { return new Date(+stop + offset); };
+    shift.delay = context.delay;
+    shift.step = function() { return step; };
+    shift.size = function() { return size; };
+    shift.timeAt = function(i) { return new Date(+start + i * step + offset); };
+    return d3.rebind(shift, event, "on");
+  };
+
   // Disposes this context, cancelling any subsequent updates.
   context.cancel = function() {
     if (timeout) {
