@@ -1,6 +1,5 @@
 var vows = require("vows"),
     assert = require("assert"),
-    d3 = require("d3"),
     cubism = require("../");
 
 var suite = vows.describe("cubism.context");

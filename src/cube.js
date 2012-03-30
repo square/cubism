@@ -1,15 +1,14 @@
 cubism_context.prototype.cube = function(host) {
   if (!arguments.length) host = "";
-  var iso = d3.time.format.iso;
 
   var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
-        + "&start=" + iso(start)
-        + "&stop=" + iso(stop)
+        + "&start=" + cubism_cubeFormatDate(start)
+        + "&stop=" + cubism_cubeFormatDate(stop)
         + "&step=" + step, function(data) {
       if (!data) return callback(new Error("unable to load data"));
-      callback(null, data.map(function(d) { return [iso.parse(d.time), d.value]; }));
+      callback(null, data.map(function(d) { return [cubism_cubeParseDate(d.time), d.value]; }));
     });
   });
 
@@ -20,3 +19,6 @@ cubism_context.prototype.cube = function(host) {
 
   return source;
 };
+
+var cubism_cubeFormatDate = d3.time.format.iso,
+    cubism_cubeParseDate = cubism_cubeFormatDate.parse;

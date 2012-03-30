@@ -1,4 +1,5 @@
 var util = require("util"),
+    d3 = require("d3"),
     cubism = require("../cubism").cubism;
 
 util.puts(JSON.stringify({
