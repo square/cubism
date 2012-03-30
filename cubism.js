@@ -135,7 +135,7 @@ cubism_context.prototype.cube = function(host) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + cubism_cubeFormatDate(start)
-        + "&stop=" + cubism_cubeFormatDate(stop)
+        + "&stop=" + cubism_cubeFormatDate(new Date(+stop + step)) // off-by-one?
         + "&step=" + step, function(data) {
       if (!data) return callback(new Error("unable to load data"));
       callback(null, data.map(function(d) { return [cubism_cubeParseDate(d.time), d.value]; }));
@@ -158,7 +158,7 @@ cubism_context.prototype.graphite = function(host) {
   var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.text(host + "/render?format=raw"
         + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
-        + "&from=" + cubism_graphiteFormatDate(start - 2 * step)
+        + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
         + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
       if (!text) return callback(new Error("unable to load data"));
       callback(null, cubism_graphiteParse(text));

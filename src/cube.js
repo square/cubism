@@ -5,7 +5,7 @@ cubism_context.prototype.cube = function(host) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
         + "&start=" + cubism_cubeFormatDate(start)
-        + "&stop=" + cubism_cubeFormatDate(stop)
+        + "&stop=" + cubism_cubeFormatDate(new Date(+stop + step)) // off-by-one?
         + "&step=" + step, function(data) {
       if (!data) return callback(new Error("unable to load data"));
       callback(null, data.map(function(d) { return [cubism_cubeParseDate(d.time), d.value]; }));
