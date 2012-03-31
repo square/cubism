@@ -36,6 +36,6 @@ function cubism_graphiteParse(text) {
   return text
       .substring(i + 1)
       .split(",")
-      .map(function(d, i) { return [new Date(start + i * step), +d]; })
-      .slice(1); // the first value is always None?
+      .slice(1) // the first value is always None?
+      .map(function(d) { return +d; });
 }

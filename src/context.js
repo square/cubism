@@ -1,114 +1,51 @@
 cubism.context = function() {
   var context = new cubism_context,
-      start = new Date(NaN),
-      stop = new Date(NaN),
       step, // milliseconds
       size, // number of steps
-      event = d3.dispatch("change", "cancel"),
-      timeout,
-      refreshTimeout;
+      event = d3.dispatch("beforechange", "change");
 
-  setTimeout(rechange, 10);
-
-  function change() {
-    refresh();
-    rechange();
-  }
-
-  function refresh() {
-    refreshTimeout = 0;
-    rescale();
-    event.change.call(context);
-  }
-
-  function rechange() {
-    timeout = setTimeout(change, context.delay());
-  }
-
-  function rescale() {
-    var now = Date.now();
-    stop = new Date(Math.floor(now / step) * step);
-    start = new Date(stop - size * step);
-    return context;
-  }
-
-  // Returns the start time of the context (inclusive).
-  context.start = function() {
-    return start;
-  };
-
-  // Returns the stop time of the context (exclusive).
-  context.stop = function() {
-    return stop;
-  };
-
-  // Returns the delay in milliseconds until the next change.
-  context.delay = function() {
-    return +stop + step - Date.now();
-  };
+  setTimeout(function beforechange() {
+    var now = Date.now(),
+        stop = new Date(Math.floor((now - cubism_contextDelay) / step + 1) * step),
+        start = new Date(stop - size * step);
+    event.beforechange.call(context, start, stop);
+    setTimeout(function() { event.change.call(context, start, stop); }, cubism_contextClientDelay);
+    setTimeout(beforechange, +stop + step + cubism_contextServerDelay - now);
+  }, 10);
 
   // Set or get the step interval in milliseconds.
-  // The step interval cannot be changed after the context is started.
-  // Defaults to 10 seconds.
+  // Defaults to ten seconds.
   context.step = function(_) {
     if (!arguments.length) return step;
-    if (timeout) throw new Error("step cannot be changed mid-flight");
     step = +_;
-    return rescale();
+    return context;
   };
 
   // Set or get the context size (the count of metric values).
-  // The size cannot be changed after the context is started.
-  // Defaults to 1440 (4 hours at 10 seconds).
+  // Defaults to 1440 (four hours at ten seconds).
   context.size = function(_) {
     if (!arguments.length) return size;
-    if (timeout) throw new Error("size cannot be changed mid-flight");
     size = +_;
-    return rescale();
-  };
-
-  // Disposes this context, cancelling any subsequent updates.
-  context.cancel = function() {
-    if (timeout) {
-      timeout = clearTimeout(timeout);
-      event.cancel.call(context);
-    }
     return context;
   };
 
-  // Returns the time at the specified index `i`.
-  // If `i` is zero, this is equivalent to start.
-  // If `i` is size, this is equivalent to stop.
-  context.timeAt = function(i) {
-    return new Date(+start + i * step);
-  };
-
-  // Hasten the next change event, accumulating concurrent updates.
-  // This is typically used only by metrics when new data is available.
-  context.refresh = function() {
-    if (timeout && !refreshTimeout) refreshTimeout = setTimeout(refresh, 250);
-    return context;
-  };
-
-  // Exposes an `on` method to listen for "change" and "cancel" events.
+  // Exposes an `on` method to listen for "change" and "beforechange" events.
   d3.rebind(context, event, "on");
 
   return context.step(1e4).size(1440); // 4 hours at 10 seconds
 };
 
+// The server delay is the amount of time we wait for the server to compute a
+// metric. This delay may result from clock skew or from delays collecting
+// metrics from various hosts. The client delay is the amount of additional time
+// we wait to fetch those metrics from the server. These delays added together
+// represent the age of the most recent displayed metric.
+var cubism_contextServerDelay = 4000,
+    cubism_contextClientDelay = 1000,
+    cubism_contextDelay = cubism_contextServerDelay + cubism_contextClientDelay;
+
 function cubism_context() {}
 
 cubism_context.prototype.constant = function(value) {
-  return cubism_contextConstant(this.size(), value);
+  return new cubism_metricConstant(this, +value);
 };
-
-function cubism_contextConstant(size, value) {
-  value = +value, size = +size;
-  var metric = new cubism_metric;
-  metric.extent = function() { return [value, value]; };
-  metric.valueAt = function() { return value; };
-  metric.toString = function() { return value + ""; };
-  metric.size = function() { return size; };
-  metric.shift = function() { return metric; };
-  return metric;
-}
