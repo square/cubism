@@ -11,9 +11,11 @@ function cubism_source(context, request) {
         size = context.size(),
         id = ++cubism_sourceMetricId,
         values = [],
-        event = d3.dispatch("change");
+        event = d3.dispatch("change"),
+        listening = 0,
+        beforechangeId = "beforechange.source-metric-" + id;
 
-    context.on("beforechange.source-metric-" + id, function(start, stop) {
+    function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
       values.splice(0, steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
@@ -23,7 +25,7 @@ function cubism_source(context, request) {
         start0 = start;
         event.change.call(metric, start, stop);
       });
-    });
+    }
 
     //
     metric.valueAt = function(i) {
@@ -35,7 +37,17 @@ function cubism_source(context, request) {
       return cubism_source(context, cubism_sourceShift(request, +offset)).metric(expression);
     };
 
-    return d3.rebind(metric, event, "on");
+    //
+    metric.on = function(type, listener) {
+      if (!arguments.length) return event.on(type);
+      if (listener == null && event.on(type) != null) --listening;
+      if (listener != null && event.on(type) == null) ++listening;
+      context.on(beforechangeId, listening > 0 ? beforechange : null);
+      event.on(type, listener);
+      return metric;
+    };
+
+    return metric;
   };
 
   return source;
@@ -106,26 +118,14 @@ cubism_metricPrototype.on = function() {
   return arguments.length < 2 ? null : this;
 };
 
-var cubism_metricOperatorId = 0;
-
 function cubism_metricOperator(name, operate) {
 
   function cubism_metricOperator(left, right) {
-    var that = this,
-        id = ++cubism_metricOperatorId;
-
     if (!(right instanceof cubism_metric)) right = new cubism_metricConstant(left.context, right);
     else if (left.context !== right.context) throw new Error("mismatch context");
     cubism_metric.call(this, left.context, left + " " + name + " " + right);
     this.left = left;
     this.right = right;
-
-    // Whenever left or right dispatches a change event, route it to our listeners.
-    var event = d3.dispatch("change");
-    left.on("change.metric-operator-" + id, change);
-    right.on("change.metric-operator-" + id, change);
-    d3.rebind(this, event, "on");
-    function change() { event.change.apply(that, arguments); }
   }
 
   var cubism_metricOperatorPrototype = cubism_metricOperator.prototype = Object.create(cubism_metric.prototype);
@@ -136,6 +136,13 @@ function cubism_metricOperator(name, operate) {
 
   cubism_metricOperatorPrototype.shift = function(offset) {
     return new cubism_metricOperator(this.left.shift(offset), this.right.shift(offset));
+  };
+
+  cubism_metricOperatorPrototype.on = function(type, listener) {
+    if (arguments.length < 2) return this.left.on(type);
+    this.left.on(type, listener);
+    this.right.on(type, listener);
+    return this;
   };
 
   return function(right) {

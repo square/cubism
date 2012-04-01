@@ -8,9 +8,11 @@ function cubism_source(context, request) {
         size = context.size(),
         id = ++cubism_sourceMetricId,
         values = [],
-        event = d3.dispatch("change");
+        event = d3.dispatch("change"),
+        listening = 0,
+        beforechangeId = "beforechange.source-metric-" + id;
 
-    context.on("beforechange.source-metric-" + id, function(start, stop) {
+    function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
       values.splice(0, steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
@@ -20,7 +22,7 @@ function cubism_source(context, request) {
         start0 = start;
         event.change.call(metric, start, stop);
       });
-    });
+    }
 
     //
     metric.valueAt = function(i) {
@@ -32,7 +34,17 @@ function cubism_source(context, request) {
       return cubism_source(context, cubism_sourceShift(request, +offset)).metric(expression);
     };
 
-    return d3.rebind(metric, event, "on");
+    //
+    metric.on = function(type, listener) {
+      if (!arguments.length) return event.on(type);
+      if (listener == null && event.on(type) != null) --listening;
+      if (listener != null && event.on(type) == null) ++listening;
+      context.on(beforechangeId, listening > 0 ? beforechange : null);
+      event.on(type, listener);
+      return metric;
+    };
+
+    return metric;
   };
 
   return source;
