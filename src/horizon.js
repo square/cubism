@@ -93,9 +93,13 @@ cubism_context.prototype.horizon = function() {
 
       // Display the first metric change immediately,
       // but defer subsequent updates to the context change.
+      // Note that someone still needs to listen to the metric,
+      // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
         change(start, stop);
-        if (isFinite(y.domain()[1])) metric_.on("change.horizon-" + id, null);
+        if (isFinite(y.domain()[1])) {
+          metric_.on("change.horizon-" + id, cubism_identity);
+        }
       });
 
       changes.push(change);

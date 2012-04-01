@@ -386,9 +386,13 @@ cubism_context.prototype.horizon = function() {
 
       // Display the first metric change immediately,
       // but defer subsequent updates to the context change.
+      // Note that someone still needs to listen to the metric,
+      // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
         change(start, stop);
-        if (isFinite(y.domain()[1])) metric_.on("change.horizon-" + id, null);
+        if (isFinite(y.domain()[1])) {
+          metric_.on("change.horizon-" + id, cubism_identity);
+        }
       });
 
       changes.push(change);
@@ -554,11 +558,13 @@ cubism_context.prototype.comparison = function() {
 
       // Display the first primary change immediately,
       // but defer subsequent updates to the context change.
+      // Note that someone still needs to listen to the metric,
+      // so that it continues to update automatically.
       function firstChange(start, stop) {
         change(start, stop);
         if (y.domain().every(isFinite)) {
-          primary_.on("change.comparison-" + id, null);
-          secondary_.on("change.comparison-" + id, null);
+          primary_.on("change.comparison-" + id, cubism_identity);
+          secondary_.on("change.comparison-" + id, cubism_identity);
         }
       }
 
