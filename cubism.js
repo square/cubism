@@ -9,11 +9,10 @@ function cubism_source(context, request) {
         start0 = -Infinity,
         step = context.step(),
         size = context.size(),
-        id = ++cubism_sourceMetricId,
         values = [],
         event = d3.dispatch("change"),
         listening = 0,
-        beforechangeId = "beforechange.source-metric-" + id;
+        beforechangeId = "beforechange.source-metric-" + ++cubism_sourceMetricId;
 
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
@@ -239,10 +238,12 @@ cubism.context = function() {
   setTimeout(function beforechange() {
     var now = Date.now(),
         stop = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step),
-        start = new Date(stop - size * step);
+        start = new Date(stop - size * step),
+        delay = +stop + step + serverDelay - now;
+    if (delay < clientDelay) delay += step;
     event.beforechange.call(context, start, stop);
     setTimeout(function() { event.change.call(context, start, stop); }, clientDelay);
-    setTimeout(beforechange, +stop + step + serverDelay - now);
+    setTimeout(beforechange, delay);
   }, 10);
 
   // Set or get the step interval in milliseconds.

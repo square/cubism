@@ -6,11 +6,10 @@ function cubism_source(context, request) {
         start0 = -Infinity,
         step = context.step(),
         size = context.size(),
-        id = ++cubism_sourceMetricId,
         values = [],
         event = d3.dispatch("change"),
         listening = 0,
-        beforechangeId = "beforechange.source-metric-" + id;
+        beforechangeId = "beforechange.source-metric-" + ++cubism_sourceMetricId;
 
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));

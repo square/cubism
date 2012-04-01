@@ -9,10 +9,12 @@ cubism.context = function() {
   setTimeout(function beforechange() {
     var now = Date.now(),
         stop = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step),
-        start = new Date(stop - size * step);
+        start = new Date(stop - size * step),
+        delay = +stop + step + serverDelay - now;
+    if (delay < clientDelay) delay += step;
     event.beforechange.call(context, start, stop);
     setTimeout(function() { event.change.call(context, start, stop); }, clientDelay);
-    setTimeout(beforechange, +stop + step + serverDelay - now);
+    setTimeout(beforechange, delay);
   }, 10);
 
   // Set or get the step interval in milliseconds.
