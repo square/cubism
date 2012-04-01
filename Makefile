@@ -14,6 +14,7 @@ cubism.js: \
 	src/graphite.js \
 	src/context.js \
 	src/horizon.js \
+	src/comparison.js \
 	Makefile
 
 %.min.js: %.js Makefile
