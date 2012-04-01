@@ -7,8 +7,8 @@ cubism_context.prototype.comparison = function() {
       secondary = function(d) { return d[1]; },
       extent = null,
       title = cubism_identity,
-      formatPrimary = cubism_comparisonFormatPrimary,
-      formatChange = cubism_comparisonFormatChange,
+      formatPrimary = cubism_comparisonPrimaryFormat,
+      formatChange = cubism_comparisonChangeFormat,
       colors = ["#3182bd", "#000000", "#31a354"],
       strokeWidth = 3,
       changes = [];
@@ -45,9 +45,7 @@ cubism_context.prototype.comparison = function() {
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
           secondary_ = typeof secondary === "function" ? secondary.call(that, d, i) : secondary,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
-          extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
-          formatPrimary_ = formatPrimary.call(that, d, i),
-          formatChange_ = formatChange.call(that, d, i);
+          extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent;
 
       function change(start, stop) {
         context.save();
@@ -68,11 +66,11 @@ cubism_context.prototype.comparison = function() {
 
         spanPrimary
             .datum(valuePrimary)
-            .text(isNaN(valuePrimary) ? null : formatPrimary_);
+            .text(isNaN(valuePrimary) ? null : formatPrimary);
 
         spanChange
             .datum(valueChange)
-            .text(isNaN(valueChange) ? null : formatChange_)
+            .text(isNaN(valueChange) ? null : formatChange)
             .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
 
         // primary value
@@ -185,12 +183,4 @@ cubism_context.prototype.comparison = function() {
 
 var cubism_comparisonId = 0,
     cubism_comparisonPrimaryFormat = d3.format(".2s"),
-    cubsim_comparisonChangeFormat = d3.format("+.0%");
-
-function cubism_comparisonFormatPrimary() {
-  return cubism_comparisonPrimaryFormat;
-}
-
-function cubism_comparisonFormatChange() {
-  return cubsim_comparisonChangeFormat;
-}
+    cubism_comparisonChangeFormat = d3.format("+.0%");
