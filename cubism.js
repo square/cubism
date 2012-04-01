@@ -331,15 +331,18 @@ cubism_context.prototype.horizon = function() {
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
-          m = colors_.length >> 1;
+          m = colors_.length >> 1,
+          ready;
 
       function change(start, stop) {
         context.save();
         context.clearRect(0, 0, width, height);
 
         // update the y-domain
-        var extent__ = extent_ == null ? metric_.extent() : extent_;
-        y.domain([0, Math.max(-extent__[0], extent__[1])]);
+        var metricExtent = metric_.extent(),
+            usedExtent = extent_ == null ? metricExtent : extent_;
+        y.domain([0, Math.max(-usedExtent[0], usedExtent[1])]);
+        ready = metricExtent.every(isFinite);
 
         // value
         v = metric_.valueAt(width - 1);
@@ -390,9 +393,7 @@ cubism_context.prototype.horizon = function() {
       // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
         change(start, stop);
-        if (isFinite(y.domain()[1])) {
-          metric_.on("change.horizon-" + id, cubism_identity);
-        }
+        if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
 
       changes.push(change);
@@ -493,17 +494,19 @@ cubism_context.prototype.comparison = function() {
           spanChange = div.select(".value.change"),
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
           secondary_ = typeof secondary === "function" ? secondary.call(that, d, i) : secondary,
-          extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent;
+          extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
+          ready;
 
       function change(start, stop) {
         context.save();
         context.clearRect(0, 0, width, height);
 
-        // update the y-domain
-        y.domain([0, (extent_ == null ? primary_.extent() : extent_)[1]]);
-
-        // update the y-range
-        y.range([height, 0]);
+        // update the y-scale
+        var primaryExtent = primary_.extent(),
+            secondaryExtent = secondary_.extent(),
+            usedExtent = extent_ == null ? primaryExtent : extent_;
+        y.domain([0, usedExtent[1]]).range([height, 0]);
+        ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
         // value
         var valuePrimary = primary_.valueAt(width - 1),
@@ -560,7 +563,7 @@ cubism_context.prototype.comparison = function() {
       // so that it continues to update automatically.
       function firstChange(start, stop) {
         change(start, stop);
-        if (y.domain().every(isFinite)) {
+        if (ready) {
           primary_.on("change.comparison-" + id, cubism_identity);
           secondary_.on("change.comparison-" + id, cubism_identity);
         }
