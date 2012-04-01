@@ -163,8 +163,8 @@ cubism_context.prototype.cube = function(host) {
   var source = cubism_source(this, function(expression, start, stop, step, callback) {
     d3.json(host + "/1.0/metric"
         + "?expression=" + encodeURIComponent(expression)
-        + "&start=" + cubism_cubeFormatDate(new Date(start - step))
-        + "&stop=" + cubism_cubeFormatDate(stop)
+        + "&start=" + cubism_cubeFormatDate(start)
+        + "&stop=" + cubism_cubeFormatDate(new Date(+stop + step))
         + "&step=" + step, function(data) {
       if (!data) return callback(new Error("unable to load data"));
       callback(null, data.map(function(d) { return d.value; }));
@@ -229,7 +229,7 @@ cubism.context = function() {
 
   setTimeout(function beforechange() {
     var now = Date.now(),
-        stop = new Date(Math.floor((now - cubism_contextDelay) / step + 1) * step),
+        stop = new Date(Math.floor((now - cubism_contextDelay) / step) * step),
         start = new Date(stop - size * step);
     event.beforechange.call(context, start, stop);
     setTimeout(function() { event.change.call(context, start, stop); }, cubism_contextClientDelay);

@@ -6,7 +6,7 @@ cubism.context = function() {
 
   setTimeout(function beforechange() {
     var now = Date.now(),
-        stop = new Date(Math.floor((now - cubism_contextDelay) / step + 1) * step),
+        stop = new Date(Math.floor((now - cubism_contextDelay) / step) * step),
         start = new Date(stop - size * step);
     event.beforechange.call(context, start, stop);
     setTimeout(function() { event.change.call(context, start, stop); }, cubism_contextClientDelay);
