@@ -1,6 +1,5 @@
 cubism_context.prototype.comparison = function() {
-  var id = ++cubism_comparisonId,
-      width = this.size(),
+  var width = this.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
       primary = function(d) { return d[0]; },
@@ -16,7 +15,7 @@ cubism_context.prototype.comparison = function() {
       changes = [];
 
   // Dispatch change events to all registered listeners.
-  context.on("change.comparison-" + id, function(start, stop) {
+  context.on("change.comparison-" + ++cubism_comparisonId, function(start, stop) {
     changes.forEach(function(change) {
       change(start, stop);
     });
@@ -40,6 +39,7 @@ cubism_context.prototype.comparison = function() {
 
     selection.each(function(d, i) {
       var that = this,
+          id = ++cubism_comparisonId,
           div = d3.select(that),
           context = div.select("canvas").node().getContext("2d"),
           spanPrimary = div.select(".value.primary"),

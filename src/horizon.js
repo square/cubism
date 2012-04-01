@@ -1,6 +1,5 @@
 cubism_context.prototype.horizon = function() {
   var mode = "offset",
-      id = ++cubism_horizonId,
       width = this.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
@@ -12,7 +11,7 @@ cubism_context.prototype.horizon = function() {
       changes = [];
 
   // Dispatch change events to all registered listeners.
-  context.on("change.horizon-" + id, function(start, stop) {
+  context.on("change.horizon-" + ++cubism_horizonId, function(start, stop) {
     changes.forEach(function(change) {
       change(start, stop);
     });
@@ -33,6 +32,7 @@ cubism_context.prototype.horizon = function() {
 
     selection.each(function(d, i) {
       var that = this,
+          id = ++cubism_horizonId,
           context = d3.select(that).select("canvas").node().getContext("2d"),
           value = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
