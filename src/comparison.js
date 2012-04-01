@@ -9,8 +9,10 @@ cubism_context.prototype.comparison = function() {
       title = cubism_identity,
       formatPrimary = cubism_comparisonPrimaryFormat,
       formatChange = cubism_comparisonChangeFormat,
-      colors = ["#3182bd", "#000000", "#31a354"],
-      strokeWidth = 3,
+      colors = ["#3182bd", "#31a354"],
+      stroke = "#000000",
+      strokeWidth = 2,
+      fill = "rgba(0,0,0,.2)",
       changes = [];
 
   // Dispatch change events to all registered listeners.
@@ -44,7 +46,6 @@ cubism_context.prototype.comparison = function() {
           spanChange = div.select(".value.change"),
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
           secondary_ = typeof secondary === "function" ? secondary.call(that, d, i) : secondary,
-          colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent;
 
       function change(start, stop) {
@@ -74,16 +75,14 @@ cubism_context.prototype.comparison = function() {
             .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
 
         // primary value
-        context.globalAlpha = .1;
-        context.fillStyle = colors[1];
+        context.fillStyle = fill;
         for (var i = 0, n = width, v; i < n; ++i) {
           var y0 = y(primary_.valueAt(i));
           context.fillRect(i, y0, 1, height - y0);
         }
 
         // positive changes
-        context.globalAlpha = 1;
-        context.fillStyle = colors[2];
+        context.fillStyle = colors[1];
         for (var i = 0, n = width, v; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
@@ -99,10 +98,12 @@ cubism_context.prototype.comparison = function() {
         }
 
         // primary value
-        context.fillStyle = colors[1];
-        for (var i = 0, n = width, v; i < n; ++i) {
-          var y0 = y(primary_.valueAt(i));
-          context.fillRect(i, y0 - strokeWidth / 2 + .5, 1, strokeWidth);
+        if (strokeWidth > 0) {
+          context.fillStyle = stroke;
+          for (var i = 0, n = width, v; i < n; ++i) {
+            var y0 = y(primary_.valueAt(i));
+            context.fillRect(i, y0 - strokeWidth / 2, 1, strokeWidth);
+          }
         }
 
         context.restore();
@@ -172,9 +173,21 @@ cubism_context.prototype.comparison = function() {
     return comparison;
   };
 
+  comparison.stroke = function(_) {
+    if (!arguments.length) return stroke;
+    stroke = _;
+    return comparison;
+  };
+
   comparison.strokeWidth = function(_) {
     if (!arguments.length) return strokeWidth;
     strokeWidth = _;
+    return comparison;
+  };
+
+  comparison.fill = function(_) {
+    if (!arguments.length) return fill;
+    fill = _;
     return comparison;
   };
 
