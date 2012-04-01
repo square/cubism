@@ -53,9 +53,7 @@ cubism_context.prototype.comparison = function() {
         context.clearRect(0, 0, width, height);
 
         // update the y-domain
-        var maxPrimary = Math.abs((extent_ == null ? primary_.extent() : extent_)[1]),
-            maxSecondary = Math.abs((extent_ == null ? secondary_.extent() : extent_)[1]);
-        y.domain([0, Math.max(maxPrimary, maxSecondary)]);
+        y.domain([0, (extent_ == null ? primary_.extent() : extent_)[1]]);
 
         // update the y-range
         y.range([height, 0]);
