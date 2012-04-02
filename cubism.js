@@ -456,7 +456,7 @@ cubism_context.prototype.comparison = function() {
       title = cubism_identity,
       formatPrimary = cubism_comparisonPrimaryFormat,
       formatChange = cubism_comparisonChangeFormat,
-      colors = ["#3182bd", "lightblue", "#31a354", "lightgreen"],
+      colors = ["#9ecae1", "#3182bd", "#a1d99b", "#31a354"],
       strokeWidth = 1.5,
       changes = [];
 
