@@ -3,7 +3,9 @@
 Cubism is a JavaScript library for visualizing time series data, letting you
 construct beautiful real-time dashboards quickly and easily. Cubism fetches
 metrics from a variety of backends and constructs dynamic visualizations in the
-client using [D3](http://mbostock.github.com/d3/).
+client using [D3](http://mbostock.github.com/d3/), SVG and Canvas. Cubism also
+lets you do simple arithmetic or post-processing of metrics, such as comparing
+two metrics or comparing a metric against itself, time-shifted.
 
 Cubism currently supports the following backends:
 
@@ -13,6 +15,7 @@ Cubism currently supports the following backends:
 Cubism currently supports the following visualization types:
 
   * [horizon charts](http://vis.berkeley.edu/papers/horizon/)
+  * comparison charts
 
 ## Contributing
 
