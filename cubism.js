@@ -300,15 +300,7 @@ cubism_context.prototype.horizon = function() {
       extent = null,
       title = cubism_identity,
       format = d3.format(".2s"),
-      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
-      changes = [];
-
-  // Dispatch change events to all registered listeners.
-  context.on("change.horizon-" + ++cubism_horizonId, function(start, stop) {
-    changes.forEach(function(change) {
-      change(start, stop);
-    });
-  });
+      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
 
   function horizon(selection) {
 
@@ -326,7 +318,7 @@ cubism_context.prototype.horizon = function() {
     selection.each(function(d, i) {
       var that = this,
           id = ++cubism_horizonId,
-          context = d3.select(that).select("canvas").node().getContext("2d"),
+          canvas = d3.select(that).select("canvas").node().getContext("2d"),
           value = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
@@ -335,8 +327,8 @@ cubism_context.prototype.horizon = function() {
           ready;
 
       function change(start, stop) {
-        context.save();
-        context.clearRect(0, 0, width, height);
+        canvas.save();
+        canvas.clearRect(0, 0, width, height);
 
         // update the y-domain
         var metricExtent = metric_.extent(),
@@ -350,7 +342,7 @@ cubism_context.prototype.horizon = function() {
 
         // positive bands
         for (var j = 0; j < m; ++j) {
-          context.fillStyle = colors_[m + j];
+          canvas.fillStyle = colors_[m + j];
 
           // Adjust the y-range based on the current band index.
           var y0 = (j - m + 1) * height;
@@ -359,19 +351,19 @@ cubism_context.prototype.horizon = function() {
           for (var i = 0, n = width, v; i < n; ++i) {
             var v = metric_.valueAt(i);
             if (v <= 0) continue;
-            context.fillRect(i, v = y(v), 1, y(0) - v);
+            canvas.fillRect(i, v = y(v), 1, y(0) - v);
           }
         }
 
         // offset mode
         if (mode === "offset") {
-          context.translate(0, height);
-          context.scale(1, -1);
+          canvas.translate(0, height);
+          canvas.scale(1, -1);
         }
 
         // negative bands
         for (var j = 0; j < m; ++j) {
-          context.fillStyle = colors_[m - 1 - j];
+          canvas.fillStyle = colors_[m - 1 - j];
 
           // Adjust the y-range based on the current band index.
           var y0 = (j - m + 1) * height;
@@ -380,15 +372,15 @@ cubism_context.prototype.horizon = function() {
           for (var i = 0, n = width, v; i < n; ++i) {
             var v = metric_.valueAt(i);
             if (v >= 0) continue;
-            context.fillRect(i, y(-v), 1, y(0) - y(-v));
+            canvas.fillRect(i, y(-v), 1, y(0) - y(-v));
           }
         }
 
-        context.restore();
+        canvas.restore();
       }
 
       // Display the first metric change immediately,
-      // but defer subsequent updates to the context change.
+      // but defer subsequent updates to the canvas change.
       // Note that someone still needs to listen to the metric,
       // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
@@ -396,7 +388,8 @@ cubism_context.prototype.horizon = function() {
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
 
-      changes.push(change);
+      // Update the chart when the context changes.
+      context.on("change.horizon-" + id, change);
     });
    }
 
@@ -457,15 +450,7 @@ cubism_context.prototype.comparison = function() {
       formatPrimary = cubism_comparisonPrimaryFormat,
       formatChange = cubism_comparisonChangeFormat,
       colors = ["#9ecae1", "#3182bd", "#a1d99b", "#31a354"],
-      strokeWidth = 1.5,
-      changes = [];
-
-  // Dispatch change events to all registered listeners.
-  context.on("change.comparison-" + ++cubism_comparisonId, function(start, stop) {
-    changes.forEach(function(change) {
-      change(start, stop);
-    });
-  });
+      strokeWidth = 1.5;
 
   function comparison(selection) {
 
@@ -487,7 +472,7 @@ cubism_context.prototype.comparison = function() {
       var that = this,
           id = ++cubism_comparisonId,
           div = d3.select(that),
-          context = div.select("canvas").node().getContext("2d"),
+          canvas = div.select("canvas").node().getContext("2d"),
           spanPrimary = div.select(".value.primary"),
           spanChange = div.select(".value.change"),
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
@@ -496,8 +481,8 @@ cubism_context.prototype.comparison = function() {
           ready;
 
       function change(start, stop) {
-        context.save();
-        context.clearRect(0, 0, width, height);
+        canvas.save();
+        canvas.clearRect(0, 0, width, height);
 
         // update the y-scale
         var primaryExtent = primary_.extent(),
@@ -521,38 +506,38 @@ cubism_context.prototype.comparison = function() {
             .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
 
         // positive changes
-        context.fillStyle = colors[2];
+        canvas.fillStyle = colors[2];
         for (var i = 0, n = width - 1; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
-          if (y0 < y1) context.fillRect(i & 0xfffffe, y0, 1, y1 - y0);
+          if (y0 < y1) canvas.fillRect(i & 0xfffffe, y0, 1, y1 - y0);
         }
 
         // negative changes
-        context.fillStyle = colors[0];
+        canvas.fillStyle = colors[0];
         for (var i = 0, n = width - 1; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
-          if (y0 > y1) context.fillRect(i & 0xfffffe, y1, 1, y0 - y1);
+          if (y0 > y1) canvas.fillRect(i & 0xfffffe, y1, 1, y0 - y1);
         }
 
         // positive values
-        context.fillStyle = colors[3];
+        canvas.fillStyle = colors[3];
         for (var i = 0, n = width - 1; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
-          if (y0 <= y1) context.fillRect(i & 0xfffffe, y0, 1, strokeWidth);
+          if (y0 <= y1) canvas.fillRect(i & 0xfffffe, y0, 1, strokeWidth);
         }
 
         // negative values
-        context.fillStyle = colors[1];
+        canvas.fillStyle = colors[1];
         for (var i = 0, n = width - 1; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
-          if (y0 > y1) context.fillRect(i & 0xfffffe, y0 - strokeWidth, 1, strokeWidth);
+          if (y0 > y1) canvas.fillRect(i & 0xfffffe, y0 - strokeWidth, 1, strokeWidth);
         }
 
-        context.restore();
+        canvas.restore();
       }
 
       // Display the first primary change immediately,
@@ -569,7 +554,9 @@ cubism_context.prototype.comparison = function() {
 
       primary_.on("change.comparison-" + id, firstChange);
       secondary_.on("change.comparison-" + id, firstChange);
-      changes.push(change);
+
+      // Update the chart when the context changes.
+      context.on("change.horizon-" + id, change);
     });
    }
 
