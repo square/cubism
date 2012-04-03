@@ -199,6 +199,14 @@ cubism_context.prototype.graphite = function(host) {
     });
   });
 
+  source.find = function(pattern, callback) {
+    d3.json(host + "/metrics/find?format=completer"
+        + "&query=" + encodeURIComponent(pattern), function(result) {
+      if (!result) return callback(new Error("unable to find metrics"));
+      callback(null, result.metrics.map(function(d) { return d.path; }));
+    });
+  };
+
   // Returns the graphite host.
   source.toString = function() {
     return host;
