@@ -9,7 +9,7 @@ function cubism_source(context, request) {
         values = [],
         event = d3.dispatch("change"),
         listening = 0,
-        beforechangeId = "beforechange.source-metric-" + ++cubism_sourceMetricId;
+        beforechangeId = "beforechange.source-metric-" + ++cubism_id;
 
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
@@ -50,8 +50,7 @@ function cubism_source(context, request) {
 }
 
 // Number of metric to refetch each period, in case of lag.
-var cubism_sourceOverlap = 6,
-    cubism_sourceMetricId = 0;
+var cubism_sourceOverlap = 6;
 
 // Wraps the specified request implementation, and shifts time by the given offset.
 function cubism_sourceShift(request, offset) {

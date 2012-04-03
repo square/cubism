@@ -1,6 +1,7 @@
 cubism_context.prototype.horizon = function() {
-  var mode = "offset",
-      width = this.size(),
+  var context = this,
+      mode = "offset",
+      width = context.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -24,7 +25,7 @@ cubism_context.prototype.horizon = function() {
 
     selection.each(function(d, i) {
       var that = this,
-          id = ++cubism_horizonId,
+          id = ++cubism_id,
           canvas = d3.select(that).select("canvas").node().getContext("2d"),
           value = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
@@ -144,5 +145,3 @@ cubism_context.prototype.horizon = function() {
 
   return horizon;
 };
-
-var cubism_horizonId = 0;

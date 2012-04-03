@@ -1,5 +1,6 @@
 cubism_context.prototype.comparison = function() {
-  var width = this.size(),
+  var context = this,
+      width = context.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
       primary = function(d) { return d[0]; },
@@ -29,7 +30,7 @@ cubism_context.prototype.comparison = function() {
 
     selection.each(function(d, i) {
       var that = this,
-          id = ++cubism_comparisonId,
+          id = ++cubism_id,
           div = d3.select(that),
           canvas = div.select("canvas").node().getContext("2d"),
           spanPrimary = div.select(".value.primary"),
@@ -175,6 +176,5 @@ cubism_context.prototype.comparison = function() {
   return comparison;
 };
 
-var cubism_comparisonId = 0,
-    cubism_comparisonPrimaryFormat = d3.format(".2s"),
+var cubism_comparisonPrimaryFormat = d3.format(".2s"),
     cubism_comparisonChangeFormat = d3.format("+.0%");

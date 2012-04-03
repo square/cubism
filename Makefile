@@ -7,6 +7,7 @@ all: cubism.min.js package.json
 
 cubism.js: \
 	src/cubism.js \
+	src/id.js \
 	src/identity.js \
 	src/source.js \
 	src/metric.js \
@@ -15,6 +16,7 @@ cubism.js: \
 	src/context.js \
 	src/horizon.js \
 	src/comparison.js \
+	src/axis.js \
 	Makefile
 
 %.min.js: %.js Makefile

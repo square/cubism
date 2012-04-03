@@ -1,5 +1,6 @@
 (function(exports){
 var cubism = exports.cubism = {version: "0.0.1"};
+var cubism_id = 0;
 function cubism_identity(d) { return d; }
 function cubism_source(context, request) {
   var source = {};
@@ -12,7 +13,7 @@ function cubism_source(context, request) {
         values = [],
         event = d3.dispatch("change"),
         listening = 0,
-        beforechangeId = "beforechange.source-metric-" + ++cubism_sourceMetricId;
+        beforechangeId = "beforechange.source-metric-" + ++cubism_id;
 
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
@@ -53,8 +54,7 @@ function cubism_source(context, request) {
 }
 
 // Number of metric to refetch each period, in case of lag.
-var cubism_sourceOverlap = 6,
-    cubism_sourceMetricId = 0;
+var cubism_sourceOverlap = 6;
 
 // Wraps the specified request implementation, and shifts time by the given offset.
 function cubism_sourceShift(request, offset) {
@@ -303,8 +303,9 @@ cubism_context.prototype.axis = function() {
   return d3.svg.axis().scale(this.scale);
 };
 cubism_context.prototype.horizon = function() {
-  var mode = "offset",
-      width = this.size(),
+  var context = this,
+      mode = "offset",
+      width = context.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -328,7 +329,7 @@ cubism_context.prototype.horizon = function() {
 
     selection.each(function(d, i) {
       var that = this,
-          id = ++cubism_horizonId,
+          id = ++cubism_id,
           canvas = d3.select(that).select("canvas").node().getContext("2d"),
           value = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
@@ -448,10 +449,9 @@ cubism_context.prototype.horizon = function() {
 
   return horizon;
 };
-
-var cubism_horizonId = 0;
 cubism_context.prototype.comparison = function() {
-  var width = this.size(),
+  var context = this,
+      width = context.size(),
       height = 40,
       y = d3.scale.linear().interpolate(d3.interpolateRound),
       primary = function(d) { return d[0]; },
@@ -481,7 +481,7 @@ cubism_context.prototype.comparison = function() {
 
     selection.each(function(d, i) {
       var that = this,
-          id = ++cubism_comparisonId,
+          id = ++cubism_id,
           div = d3.select(that),
           canvas = div.select("canvas").node().getContext("2d"),
           spanPrimary = div.select(".value.primary"),
@@ -627,7 +627,24 @@ cubism_context.prototype.comparison = function() {
   return comparison;
 };
 
-var cubism_comparisonId = 0,
-    cubism_comparisonPrimaryFormat = d3.format(".2s"),
+var cubism_comparisonPrimaryFormat = d3.format(".2s"),
     cubism_comparisonChangeFormat = d3.format("+.0%");
+cubism_context.prototype.axis = function() {
+  var context = this,
+      axis_ = d3.svg.axis().scale(context.scale);
+
+  function axis(selection) {
+    context.on("change.axis-" + ++cubism_id, function() {
+      selection.call(axis_);
+    });
+  }
+
+  return d3.rebind(axis, axis_,
+      "orient",
+      "ticks",
+      "tickSubdivide",
+      "tickSize",
+      "tickPadding",
+      "tickFormat");
+};
 })(this);
