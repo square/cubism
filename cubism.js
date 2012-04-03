@@ -544,6 +544,8 @@ cubism_context.prototype.comparison = function() {
       // but defer subsequent updates to the context change.
       // Note that someone still needs to listen to the metric,
       // so that it continues to update automatically.
+      primary_.on("change.comparison-" + id, firstChange);
+      secondary_.on("change.comparison-" + id, firstChange);
       function firstChange(start, stop) {
         change(start, stop);
         if (ready) {
@@ -552,11 +554,8 @@ cubism_context.prototype.comparison = function() {
         }
       }
 
-      primary_.on("change.comparison-" + id, firstChange);
-      secondary_.on("change.comparison-" + id, firstChange);
-
       // Update the chart when the context changes.
-      context.on("change.horizon-" + id, change);
+      context.on("change.comparison-" + id, change);
     });
    }
 
