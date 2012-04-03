@@ -47,8 +47,8 @@ cubism_context.prototype.comparison = function() {
         // update the scale
         var primaryExtent = primary_.extent(),
             secondaryExtent = secondary_.extent(),
-            usedExtent = extent_ == null ? primaryExtent : extent_;
-        scale.domain([0, usedExtent[1]]).range([height, 0]);
+            extent = extent_ == null ? primaryExtent : extent_;
+        scale.domain([0, extent[1]]).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
         // value

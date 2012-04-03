@@ -347,18 +347,20 @@ cubism_context.prototype.horizon = function() {
           ready;
 
       function change(start, stop) {
-        canvas.save();
         canvas.clearRect(0, 0, width, height);
 
         // update the domain
-        var metricExtent = metric_.extent(),
-            usedExtent = extent_ == null ? metricExtent : extent_;
-        scale.domain([0, Math.max(-usedExtent[0], usedExtent[1])]);
-        ready = metricExtent.every(isFinite);
+        var extent = metric_.extent();
+        ready = extent.every(isFinite);
+        if (extent_ != null) extent = extent_;
+        scale.domain([0, Math.max(extent[0], extent[1])]);
 
         // value
-        v = metric_.valueAt(width - 1);
-        value.datum(v).text(isNaN(v) ? null : format);
+        var y1 = metric_.valueAt(width - 1);
+        value.datum(y1).text(isNaN(y1) ? null : format);
+
+        // record whether there are negative values to display
+        var negative;
 
         // positive bands
         for (var j = 0; j < m; ++j) {
@@ -369,36 +371,42 @@ cubism_context.prototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = 0, n = width, v; i < n; ++i) {
-            var v = metric_.valueAt(i);
-            if (v <= 0) continue;
-            canvas.fillRect(i, v = scale(v), 1, y0 - v);
+          for (var i = 0, n = width; i < n; ++i) {
+            y1 = metric_.valueAt(i);
+            if (y1 <= 0) { negative = true; continue; }
+            canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
           }
         }
 
-        // offset mode
-        if (mode === "offset") {
-          canvas.translate(0, height);
-          canvas.scale(1, -1);
-        }
+        if (negative) {
+          // enable offset mode
+          if (mode === "offset") {
+            canvas.save();
+            canvas.translate(0, height);
+            canvas.scale(1, -1);
+          }
 
-        // negative bands
-        for (var j = 0; j < m; ++j) {
-          canvas.fillStyle = colors_[m - 1 - j];
+          // negative bands
+          for (var j = 0; j < m; ++j) {
+            canvas.fillStyle = colors_[m - 1 - j];
 
-          // Adjust the range based on the current band index.
-          var y0 = (j - m + 1) * height;
-          scale.range([m * height + y0, y0]);
-          y0 = scale(0);
+            // Adjust the range based on the current band index.
+            var y0 = (j - m + 1) * height;
+            scale.range([m * height + y0, y0]);
+            y0 = scale(0);
 
-          for (var i = 0, n = width, v; i < n; ++i) {
-            var v = metric_.valueAt(i);
-            if (v >= 0) continue;
-            canvas.fillRect(i, scale(-v), 1, y0 - scale(-v));
+            for (var i = 0, n = width; i < n; ++i) {
+              y1 = metric_.valueAt(i);
+              if (y1 >= 0) continue;
+              canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
+            }
+          }
+
+          // undo offset mode
+          if (mode === "offset") {
+            canvas.restore();
           }
         }
-
-        canvas.restore();
       }
 
       // Display the first metric change immediately,
@@ -514,8 +522,8 @@ cubism_context.prototype.comparison = function() {
         // update the scale
         var primaryExtent = primary_.extent(),
             secondaryExtent = secondary_.extent(),
-            usedExtent = extent_ == null ? primaryExtent : extent_;
-        scale.domain([0, usedExtent[1]]).range([height, 0]);
+            extent = extent_ == null ? primaryExtent : extent_;
+        scale.domain([0, extent[1]]).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
         // value
