@@ -17,6 +17,7 @@ function cubism_source(context, request) {
 
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
+      if (!steps) return; // already fetched this window; ignore it!
       values.splice(0, steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
       request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
@@ -237,28 +238,43 @@ function cubism_graphiteParse(text) {
 }
 cubism.context = function() {
   var context = new cubism_context,
-      step, // milliseconds
-      size, // number of steps
+      step = 1e4, // ten seconds, in milliseconds
+      size = 1440, // four hours at ten seconds, in pixels
+      start0, stop0, // the start and stop for the previous change event
+      start1, stop1, // the start and stop for the next beforechange event
       serverDelay = 4000,
       clientDelay = 1000,
       event = d3.dispatch("beforechange", "change"),
-      scale = context.scale = d3.time.scale();
+      scale = context.scale = d3.time.scale().range([0, size]);
 
-  setTimeout(function beforechange() {
-    var now = Date.now(),
-        stop = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step),
-        start = new Date(stop - size * step),
-        delay = +stop + step + serverDelay - now;
+  function update() {
+    var now = Date.now();
+    stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
+    start0 = new Date(stop0 - size * step);
+    stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
+    start1 = new Date(stop1 - size * step);
+    scale.domain([start0, stop0]);
+    return context;
+  }
+
+  setTimeout(function() {
+    var delay = +stop1 + serverDelay - Date.now();
+
+    // If we're too late for the first beforechange event, skip it.
     if (delay < clientDelay) delay += step;
 
-    event.beforechange.call(context, start, stop);
+    setTimeout(function beforechange() {
+      stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
+      start1 = new Date(stop1 - size * step);
+      event.beforechange.call(context, start1, stop1);
 
-    setTimeout(function() {
-      scale.domain([start, stop]);
-      event.change.call(context, start, stop);
-    }, clientDelay);
+      setTimeout(function() {
+        scale.domain([start0 = start1, stop0 = stop1]);
+        event.change.call(context, start1, stop1);
+      }, clientDelay);
 
-    setTimeout(beforechange, delay);
+      setTimeout(beforechange, step);
+    }, delay);
   }, 10);
 
   // Set or get the step interval in milliseconds.
@@ -266,7 +282,7 @@ cubism.context = function() {
   context.step = function(_) {
     if (!arguments.length) return step;
     step = +_;
-    return context;
+    return update();
   };
 
   // Set or get the context size (the count of metric values).
@@ -274,7 +290,7 @@ cubism.context = function() {
   context.size = function(_) {
     if (!arguments.length) return size;
     scale.range([0, size = +_]);
-    return context;
+    return update();
   };
 
   // The server delay is the amount of time we wait for the server to compute a
@@ -283,7 +299,7 @@ cubism.context = function() {
   context.serverDelay = function(_) {
     if (!arguments.length) return serverDelay;
     serverDelay = +_;
-    return context;
+    return update();
   };
 
   // The client delay is the amount of additional time we wait to fetch those
@@ -292,23 +308,32 @@ cubism.context = function() {
   context.clientDelay = function(_) {
     if (!arguments.length) return clientDelay;
     clientDelay = +_;
+    return update();
+  };
+
+  // Add, remove or get listeners for "change" and "beforechange" events.
+  context.on = function(type, listener) {
+    if (arguments.length < 2) return event.on(type);
+    event.on(type, listener);
+
+    // Notify the listener of the current start and stop time, as appropriate.
+    // This way, metrics can make requests for data immediately,
+    // and likewise the axis can display itself synchronously.
+    if (listener != null) {
+      if (/^beforechange(\.|$)/.test(type)) listener.call(context, start1, stop1);
+      if (/^change(\.|$)/.test(type)) listener.call(context, start0, stop0);
+    }
+
     return context;
   };
 
-  // Exposes an `on` method to listen for "change" and "beforechange" events.
-  d3.rebind(context, event, "on");
-
-  return context.step(1e4).size(1440); // 4 hours at 10 seconds
+  return update();
 };
 
 function cubism_context() {}
 
 cubism_context.prototype.constant = function(value) {
   return new cubism_metricConstant(this, +value);
-};
-
-cubism_context.prototype.axis = function() {
-  return d3.svg.axis().scale(this.scale);
 };
 cubism_context.prototype.horizon = function() {
   var context = this,
