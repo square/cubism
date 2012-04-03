@@ -242,8 +242,8 @@ cubism.context = function() {
       size = 1440, // four hours at ten seconds, in pixels
       start0, stop0, // the start and stop for the previous change event
       start1, stop1, // the start and stop for the next beforechange event
-      serverDelay = 4000,
-      clientDelay = 1000,
+      serverDelay = 5e3,
+      clientDelay = 5e3,
       event = d3.dispatch("beforechange", "change"),
       scale = context.scale = d3.time.scale().range([0, size]);
 
