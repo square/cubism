@@ -518,7 +518,7 @@ cubism_context.prototype.comparison = function() {
 
         // positive changes
         canvas.fillStyle = colors[2];
-        for (var i = 0, n = width - 1; i < n; ++i) {
+        for (var i = 0, n = width; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
           if (y0 < y1) canvas.fillRect(i & 0xfffffe, y0, 1, y1 - y0);
@@ -526,7 +526,7 @@ cubism_context.prototype.comparison = function() {
 
         // negative changes
         canvas.fillStyle = colors[0];
-        for (var i = 0, n = width - 1; i < n; ++i) {
+        for (i = 0; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
           if (y0 > y1) canvas.fillRect(i & 0xfffffe, y1, 1, y0 - y1);
@@ -534,7 +534,7 @@ cubism_context.prototype.comparison = function() {
 
         // positive values
         canvas.fillStyle = colors[3];
-        for (var i = 0, n = width - 1; i < n; ++i) {
+        for (i = 0; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
           if (y0 <= y1) canvas.fillRect(i & 0xfffffe, y0, 1, strokeWidth);
@@ -542,7 +542,7 @@ cubism_context.prototype.comparison = function() {
 
         // negative values
         canvas.fillStyle = colors[1];
-        for (var i = 0, n = width - 1; i < n; ++i) {
+        for (i = 0; i < n; ++i) {
           var y0 = y(primary_.valueAt(i)),
               y1 = y(secondary_.valueAt(i));
           if (y0 > y1) canvas.fillRect(i & 0xfffffe, y0 - strokeWidth, 1, strokeWidth);
