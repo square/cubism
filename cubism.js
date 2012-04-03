@@ -20,10 +20,10 @@ function cubism_source(context, request) {
       if (!steps) return; // already fetched this window; ignore it!
       values.splice(0, steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
+      start0 = start;
       request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
         if (error) return console.warn(error);
         for (var j = 0, i = size - steps, m = data.length; j < m; ++j) values[j + i] = data[j];
-        start0 = start;
         event.change.call(metric, start, stop);
       });
     }
