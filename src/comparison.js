@@ -2,7 +2,7 @@ cubism_context.prototype.comparison = function() {
   var context = this,
       width = context.size(),
       height = 40,
-      y = d3.scale.linear().interpolate(d3.interpolateRound),
+      scale = d3.scale.linear().interpolate(d3.interpolateRound),
       primary = function(d) { return d[0]; },
       secondary = function(d) { return d[1]; },
       extent = null,
@@ -44,11 +44,11 @@ cubism_context.prototype.comparison = function() {
         canvas.save();
         canvas.clearRect(0, 0, width, height);
 
-        // update the y-scale
+        // update the scale
         var primaryExtent = primary_.extent(),
             secondaryExtent = secondary_.extent(),
             usedExtent = extent_ == null ? primaryExtent : extent_;
-        y.domain([0, usedExtent[1]]).range([height, 0]);
+        scale.domain([0, usedExtent[1]]).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
         // value
@@ -68,32 +68,32 @@ cubism_context.prototype.comparison = function() {
         // positive changes
         canvas.fillStyle = colors[2];
         for (var i = 0, n = width; i < n; ++i) {
-          var y0 = y(primary_.valueAt(i)),
-              y1 = y(secondary_.valueAt(i));
+          var y0 = scale(primary_.valueAt(i)),
+              y1 = scale(secondary_.valueAt(i));
           if (y0 < y1) canvas.fillRect(i & 0xfffffe, y0, 1, y1 - y0);
         }
 
         // negative changes
         canvas.fillStyle = colors[0];
         for (i = 0; i < n; ++i) {
-          var y0 = y(primary_.valueAt(i)),
-              y1 = y(secondary_.valueAt(i));
+          var y0 = scale(primary_.valueAt(i)),
+              y1 = scale(secondary_.valueAt(i));
           if (y0 > y1) canvas.fillRect(i & 0xfffffe, y1, 1, y0 - y1);
         }
 
         // positive values
         canvas.fillStyle = colors[3];
         for (i = 0; i < n; ++i) {
-          var y0 = y(primary_.valueAt(i)),
-              y1 = y(secondary_.valueAt(i));
+          var y0 = scale(primary_.valueAt(i)),
+              y1 = scale(secondary_.valueAt(i));
           if (y0 <= y1) canvas.fillRect(i & 0xfffffe, y0, 1, strokeWidth);
         }
 
         // negative values
         canvas.fillStyle = colors[1];
         for (i = 0; i < n; ++i) {
-          var y0 = y(primary_.valueAt(i)),
-              y1 = y(secondary_.valueAt(i));
+          var y0 = scale(primary_.valueAt(i)),
+              y1 = scale(secondary_.valueAt(i));
           if (y0 > y1) canvas.fillRect(i & 0xfffffe, y0 - strokeWidth, 1, strokeWidth);
         }
 
@@ -134,6 +134,12 @@ cubism_context.prototype.comparison = function() {
   comparison.secondary = function(_) {
     if (!arguments.length) return secondary;
     secondary = _;
+    return comparison;
+  };
+
+  comparison.scale = function(_) {
+    if (!arguments.length) return scale;
+    scale = _;
     return comparison;
   };
 

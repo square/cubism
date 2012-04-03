@@ -3,7 +3,7 @@ cubism_context.prototype.horizon = function() {
       mode = "offset",
       width = context.size(),
       height = 40,
-      y = d3.scale.linear().interpolate(d3.interpolateRound),
+      scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
       extent = null,
       title = cubism_identity,
@@ -38,10 +38,10 @@ cubism_context.prototype.horizon = function() {
         canvas.save();
         canvas.clearRect(0, 0, width, height);
 
-        // update the y-domain
+        // update the domain
         var metricExtent = metric_.extent(),
             usedExtent = extent_ == null ? metricExtent : extent_;
-        y.domain([0, Math.max(-usedExtent[0], usedExtent[1])]);
+        scale.domain([0, Math.max(-usedExtent[0], usedExtent[1])]);
         ready = metricExtent.every(isFinite);
 
         // value
@@ -52,14 +52,15 @@ cubism_context.prototype.horizon = function() {
         for (var j = 0; j < m; ++j) {
           canvas.fillStyle = colors_[m + j];
 
-          // Adjust the y-range based on the current band index.
+          // Adjust the range based on the current band index.
           var y0 = (j - m + 1) * height;
-          y.range([m * height + y0, y0]);
+          scale.range([m * height + y0, y0]);
+          y0 = scale(0);
 
           for (var i = 0, n = width, v; i < n; ++i) {
             var v = metric_.valueAt(i);
             if (v <= 0) continue;
-            canvas.fillRect(i, v = y(v), 1, y(0) - v);
+            canvas.fillRect(i, v = scale(v), 1, y0 - v);
           }
         }
 
@@ -73,14 +74,15 @@ cubism_context.prototype.horizon = function() {
         for (var j = 0; j < m; ++j) {
           canvas.fillStyle = colors_[m - 1 - j];
 
-          // Adjust the y-range based on the current band index.
+          // Adjust the range based on the current band index.
           var y0 = (j - m + 1) * height;
-          y.range([m * height + y0, y0]);
+          scale.range([m * height + y0, y0]);
+          y0 = scale(0);
 
           for (var i = 0, n = width, v; i < n; ++i) {
             var v = metric_.valueAt(i);
             if (v >= 0) continue;
-            canvas.fillRect(i, y(-v), 1, y(0) - y(-v));
+            canvas.fillRect(i, scale(-v), 1, y0 - scale(-v));
           }
         }
 
@@ -116,6 +118,12 @@ cubism_context.prototype.horizon = function() {
   horizon.metric = function(_) {
     if (!arguments.length) return metric;
     metric = _;
+    return horizon;
+  };
+
+  horizon.scale = function(_) {
+    if (!arguments.length) return scale;
+    scale = _;
     return horizon;
   };
 
