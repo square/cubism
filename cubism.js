@@ -233,7 +233,8 @@ cubism.context = function() {
       size, // number of steps
       serverDelay = 4000,
       clientDelay = 1000,
-      event = d3.dispatch("beforechange", "change");
+      event = d3.dispatch("beforechange", "change"),
+      scale = context.scale = d3.time.scale();
 
   setTimeout(function beforechange() {
     var now = Date.now(),
@@ -241,8 +242,14 @@ cubism.context = function() {
         start = new Date(stop - size * step),
         delay = +stop + step + serverDelay - now;
     if (delay < clientDelay) delay += step;
+
     event.beforechange.call(context, start, stop);
-    setTimeout(function() { event.change.call(context, start, stop); }, clientDelay);
+
+    setTimeout(function() {
+      scale.domain([start, stop]);
+      event.change.call(context, start, stop);
+    }, clientDelay);
+
     setTimeout(beforechange, delay);
   }, 10);
 
@@ -258,7 +265,7 @@ cubism.context = function() {
   // Defaults to 1440 (four hours at ten seconds).
   context.size = function(_) {
     if (!arguments.length) return size;
-    size = +_;
+    scale.range([0, size = +_]);
     return context;
   };
 
@@ -290,6 +297,10 @@ function cubism_context() {}
 
 cubism_context.prototype.constant = function(value) {
   return new cubism_metricConstant(this, +value);
+};
+
+cubism_context.prototype.axis = function() {
+  return d3.svg.axis().scale(this.scale);
 };
 cubism_context.prototype.horizon = function() {
   var mode = "offset",
