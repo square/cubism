@@ -1,7 +1,7 @@
 cubism_context.prototype.comparison = function() {
   var context = this,
       width = context.size(),
-      height = 40,
+      height = 120,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       primary = function(d) { return d[0]; },
       secondary = function(d) { return d[1]; },
