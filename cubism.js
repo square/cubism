@@ -2,6 +2,18 @@
 var cubism = exports.cubism = {version: "0.0.1"};
 var cubism_id = 0;
 function cubism_identity(d) { return d; }
+cubism.option = function(name, value) {
+  var options = location.search.substring(1).split("&"),
+      i = -1,
+      n = options.length,
+      o;
+  while (++i < n) {
+    if ((o = options[i].split("="))[0] == name) {
+      return decodeURIComponent(o[1]);
+    }
+  }
+  return value;
+};
 function cubism_source(context, request) {
   var source = {};
 

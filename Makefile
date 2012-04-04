@@ -9,6 +9,7 @@ cubism.js: \
 	src/cubism.js \
 	src/id.js \
 	src/identity.js \
+	src/option.js \
 	src/source.js \
 	src/metric.js \
 	src/cube.js \
