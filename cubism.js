@@ -20,34 +20,34 @@ function cubism_source(context, request) {
   source.metric = function(expression) {
     var metric = new cubism_metric(context, expression),
         id = ".source-metric-" + ++cubism_id,
-        start0 = -Infinity,
+        start = -Infinity,
         step = context.step(),
         size = context.size(),
         values = [],
-        valuesTemp,
+        valuesNext = values,
         event = d3.dispatch("change"),
-        listening = 0;
+        listening = 0,
+        fetching;
 
     // Prefetch new data into a temporary array.
-    function beforechange(start, stop) {
-      var steps = Math.min(size, Math.round((start - start0) / step));
-      if (!steps || valuesTemp) return; // already fetched, or fetching!
-      var temp = valuesTemp = values.slice(steps);
+    function beforechange(start1, stop) {
+      var steps = Math.min(size, Math.round((start1 - start) / step));
+      if (!steps || fetching) return; // already fetched, or fetching!
+      valuesNext = values.slice(steps);
+      fetching = true;
+      start = start1;
       steps = Math.min(size, steps + cubism_sourceOverlap);
       request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
+        fetching = false;
         if (error) return console.warn(error);
-        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) temp[j + i] = data[j];
+        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) valuesNext[j + i] = data[j];
         event.change.call(metric, start, stop);
       });
     }
 
     // When the context changes, switch to the new data, ready-or-not!
-    function change(start, stop) {
-      if (start0 - start) {
-        values = valuesTemp;
-        valuesTemp = null;
-        start0 = start;
-      }
+    function change() {
+      values = valuesNext;
     }
 
     //
