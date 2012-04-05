@@ -14,7 +14,7 @@ cubism_context.prototype.rule = function() {
     context.on("focus.rule-" + ++cubism_id, function(i) {
       line
           .style("display", i == null ? "none" : null)
-          .style("left", function() { return this.parentNode.offsetLeft - window.scrollX + i + "px"; });
+          .style("left", function() { return this.parentNode.getBoundingClientRect().left + i + "px"; });
     });
   }
 

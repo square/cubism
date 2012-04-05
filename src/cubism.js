@@ -1,1 +1,1 @@
-var cubism = exports.cubism = {version: "0.0.1"};
+var cubism = exports.cubism = {version: "0.1.0"};
