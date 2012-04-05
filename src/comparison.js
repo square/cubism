@@ -14,6 +14,10 @@ cubism_context.prototype.comparison = function() {
 
   function comparison(selection) {
 
+    selection
+        .on("mousemove.comparison", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mouseout.comparison", function() { context.focus(null); });
+
     selection.append("canvas")
         .attr("width", width)
         .attr("height", height);
@@ -51,20 +55,6 @@ cubism_context.prototype.comparison = function() {
         scale.domain([0, extent[1]]).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
-        // value
-        var valuePrimary = primary_.valueAt(width - 1),
-            valueSecondary = secondary_.valueAt(width - 1),
-            valueChange = (valuePrimary - valueSecondary) / valueSecondary;
-
-        spanPrimary
-            .datum(valuePrimary)
-            .text(isNaN(valuePrimary) ? null : formatPrimary);
-
-        spanChange
-            .datum(valueChange)
-            .text(isNaN(valueChange) ? null : formatChange)
-            .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
-
         // positive changes
         canvas.fillStyle = colors[2];
         for (var i = 0, n = width; i < n; ++i) {
@@ -100,6 +90,22 @@ cubism_context.prototype.comparison = function() {
         canvas.restore();
       }
 
+      function focus(i) {
+        if (i == null) i = width - 1;
+        var valuePrimary = primary_.valueAt(i),
+            valueSecondary = secondary_.valueAt(i),
+            valueChange = (valuePrimary - valueSecondary) / valueSecondary;
+
+        spanPrimary
+            .datum(valuePrimary)
+            .text(isNaN(valuePrimary) ? null : formatPrimary);
+
+        spanChange
+            .datum(valueChange)
+            .text(isNaN(valueChange) ? null : formatChange)
+            .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
+      }
+
       // Display the first primary change immediately,
       // but defer subsequent updates to the context change.
       // Note that someone still needs to listen to the metric,
@@ -107,7 +113,7 @@ cubism_context.prototype.comparison = function() {
       primary_.on("change.comparison-" + id, firstChange);
       secondary_.on("change.comparison-" + id, firstChange);
       function firstChange(start, stop) {
-        change(start, stop);
+        change(start, stop), focus();
         if (ready) {
           primary_.on("change.comparison-" + id, cubism_identity);
           secondary_.on("change.comparison-" + id, cubism_identity);
@@ -116,6 +122,7 @@ cubism_context.prototype.comparison = function() {
 
       // Update the chart when the context changes.
       context.on("change.comparison-" + id, change);
+      context.on("focus.comparison-" + id, focus);
     });
    }
 

@@ -18,6 +18,7 @@ cubism.js: \
 	src/horizon.js \
 	src/comparison.js \
 	src/axis.js \
+	src/rule.js \
 	Makefile
 
 %.min.js: %.js Makefile

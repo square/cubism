@@ -256,8 +256,9 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next beforechange event
       serverDelay = 5e3,
       clientDelay = 5e3,
-      event = d3.dispatch("beforechange", "change"),
-      scale = context.scale = d3.time.scale().range([0, size]);
+      event = d3.dispatch("beforechange", "change", "focus"),
+      scale = context.scale = d3.time.scale().range([0, size])
+      focus;
 
   function update() {
     var now = Date.now();
@@ -283,6 +284,7 @@ cubism.context = function() {
       setTimeout(function() {
         scale.domain([start0 = start1, stop0 = stop1]);
         event.change.call(context, start1, stop1);
+        event.focus.call(context, focus);
       }, clientDelay);
 
       setTimeout(beforechange, step);
@@ -323,6 +325,12 @@ cubism.context = function() {
     return update();
   };
 
+  //
+  context.focus = function(i) {
+    event.focus.call(context, focus = i);
+    return context;
+  };
+
   // Add, remove or get listeners for "change" and "beforechange" events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
@@ -334,6 +342,7 @@ cubism.context = function() {
     if (listener != null) {
       if (/^beforechange(\.|$)/.test(type)) listener.call(context, start1, stop1);
       if (/^change(\.|$)/.test(type)) listener.call(context, start0, stop0);
+      if (/^focus(\.|$)/.test(type)) listener.call(context, focus);
     }
 
     return context;
@@ -361,6 +370,10 @@ cubism_context.prototype.horizon = function() {
 
   function horizon(selection) {
 
+    selection
+        .on("mousemove.horizon", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mouseout.horizon", function() { context.focus(null); });
+
     selection.append("canvas")
         .attr("width", width)
         .attr("height", height);
@@ -376,7 +389,7 @@ cubism_context.prototype.horizon = function() {
       var that = this,
           id = ++cubism_id,
           canvas = d3.select(that).select("canvas").node().getContext("2d"),
-          value = d3.select(that).select(".value"),
+          span = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
@@ -392,10 +405,6 @@ cubism_context.prototype.horizon = function() {
         if (extent_ != null) extent = extent_;
         scale.domain([0, Math.max(extent[0], extent[1])]);
 
-        // value
-        var y1 = metric_.valueAt(width - 1);
-        value.datum(y1).text(isNaN(y1) ? null : format);
-
         // record whether there are negative values to display
         var negative;
 
@@ -408,7 +417,7 @@ cubism_context.prototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = 0, n = width; i < n; ++i) {
+          for (var i = 0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
@@ -432,7 +441,7 @@ cubism_context.prototype.horizon = function() {
             scale.range([m * height + y0, y0]);
             y0 = scale(0);
 
-            for (var i = 0, n = width; i < n; ++i) {
+            for (var i = 0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
@@ -446,17 +455,24 @@ cubism_context.prototype.horizon = function() {
         }
       }
 
+      function focus(i) {
+        if (i == null) i = width - 1;
+        var value = metric_.valueAt(i);
+        span.datum(value).text(isNaN(value) ? null : format);
+      }
+
       // Display the first metric change immediately,
       // but defer subsequent updates to the canvas change.
       // Note that someone still needs to listen to the metric,
       // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
-        change(start, stop);
+        change(start, stop), focus();
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
 
       // Update the chart when the context changes.
       context.on("change.horizon-" + id, change);
+      context.on("focus.horizon-" + id, focus);
     });
    }
 
@@ -526,6 +542,10 @@ cubism_context.prototype.comparison = function() {
 
   function comparison(selection) {
 
+    selection
+        .on("mousemove.comparison", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mouseout.comparison", function() { context.focus(null); });
+
     selection.append("canvas")
         .attr("width", width)
         .attr("height", height);
@@ -563,20 +583,6 @@ cubism_context.prototype.comparison = function() {
         scale.domain([0, extent[1]]).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
 
-        // value
-        var valuePrimary = primary_.valueAt(width - 1),
-            valueSecondary = secondary_.valueAt(width - 1),
-            valueChange = (valuePrimary - valueSecondary) / valueSecondary;
-
-        spanPrimary
-            .datum(valuePrimary)
-            .text(isNaN(valuePrimary) ? null : formatPrimary);
-
-        spanChange
-            .datum(valueChange)
-            .text(isNaN(valueChange) ? null : formatChange)
-            .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
-
         // positive changes
         canvas.fillStyle = colors[2];
         for (var i = 0, n = width; i < n; ++i) {
@@ -612,6 +618,22 @@ cubism_context.prototype.comparison = function() {
         canvas.restore();
       }
 
+      function focus(i) {
+        if (i == null) i = width - 1;
+        var valuePrimary = primary_.valueAt(i),
+            valueSecondary = secondary_.valueAt(i),
+            valueChange = (valuePrimary - valueSecondary) / valueSecondary;
+
+        spanPrimary
+            .datum(valuePrimary)
+            .text(isNaN(valuePrimary) ? null : formatPrimary);
+
+        spanChange
+            .datum(valueChange)
+            .text(isNaN(valueChange) ? null : formatChange)
+            .attr("class", "value change " + (valueChange > 0 ? "positive" : valueChange < 0 ? "negative" : ""));
+      }
+
       // Display the first primary change immediately,
       // but defer subsequent updates to the context change.
       // Note that someone still needs to listen to the metric,
@@ -619,7 +641,7 @@ cubism_context.prototype.comparison = function() {
       primary_.on("change.comparison-" + id, firstChange);
       secondary_.on("change.comparison-" + id, firstChange);
       function firstChange(start, stop) {
-        change(start, stop);
+        change(start, stop), focus();
         if (ready) {
           primary_.on("change.comparison-" + id, cubism_identity);
           secondary_.on("change.comparison-" + id, cubism_identity);
@@ -628,6 +650,7 @@ cubism_context.prototype.comparison = function() {
 
       // Update the chart when the context changes.
       context.on("change.comparison-" + id, change);
+      context.on("focus.comparison-" + id, focus);
     });
    }
 
@@ -713,5 +736,27 @@ cubism_context.prototype.axis = function() {
       "tickSize",
       "tickPadding",
       "tickFormat");
+};
+cubism_context.prototype.rule = function() {
+  var context = this;
+
+  function rule(selection) {
+    var line = selection.append("div")
+        .attr("class", "line")
+        .style("position", "fixed")
+        .style("top", 0)
+        .style("right", 0)
+        .style("bottom", 0)
+        .style("width", "1px")
+        .style("pointer-events", "none");
+
+    context.on("focus.rule-" + ++cubism_id, function(i) {
+      if (d3.event) line
+          .style("display", i == null ? "none" : null)
+          .style("left", d3.event.clientX + "px");
+    });
+  }
+
+  return rule;
 };
 })(this);

@@ -6,8 +6,9 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next beforechange event
       serverDelay = 5e3,
       clientDelay = 5e3,
-      event = d3.dispatch("beforechange", "change"),
-      scale = context.scale = d3.time.scale().range([0, size]);
+      event = d3.dispatch("beforechange", "change", "focus"),
+      scale = context.scale = d3.time.scale().range([0, size])
+      focus;
 
   function update() {
     var now = Date.now();
@@ -33,6 +34,7 @@ cubism.context = function() {
       setTimeout(function() {
         scale.domain([start0 = start1, stop0 = stop1]);
         event.change.call(context, start1, stop1);
+        event.focus.call(context, focus);
       }, clientDelay);
 
       setTimeout(beforechange, step);
@@ -73,6 +75,12 @@ cubism.context = function() {
     return update();
   };
 
+  // Sets the focus to the specified index, and dispatches a "focus" event.
+  context.focus = function(i) {
+    event.focus.call(context, focus = i);
+    return context;
+  };
+
   // Add, remove or get listeners for "change" and "beforechange" events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
@@ -84,6 +92,7 @@ cubism.context = function() {
     if (listener != null) {
       if (/^beforechange(\.|$)/.test(type)) listener.call(context, start1, stop1);
       if (/^change(\.|$)/.test(type)) listener.call(context, start0, stop0);
+      if (/^focus(\.|$)/.test(type)) listener.call(context, focus);
     }
 
     return context;

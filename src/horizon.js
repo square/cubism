@@ -12,6 +12,10 @@ cubism_context.prototype.horizon = function() {
 
   function horizon(selection) {
 
+    selection
+        .on("mousemove.horizon", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mouseout.horizon", function() { context.focus(null); });
+
     selection.append("canvas")
         .attr("width", width)
         .attr("height", height);
@@ -27,7 +31,7 @@ cubism_context.prototype.horizon = function() {
       var that = this,
           id = ++cubism_id,
           canvas = d3.select(that).select("canvas").node().getContext("2d"),
-          value = d3.select(that).select(".value"),
+          span = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
@@ -43,10 +47,6 @@ cubism_context.prototype.horizon = function() {
         if (extent_ != null) extent = extent_;
         scale.domain([0, Math.max(extent[0], extent[1])]);
 
-        // value
-        var y1 = metric_.valueAt(width - 1);
-        value.datum(y1).text(isNaN(y1) ? null : format);
-
         // record whether there are negative values to display
         var negative;
 
@@ -59,7 +59,7 @@ cubism_context.prototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = 0, n = width; i < n; ++i) {
+          for (var i = 0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
@@ -83,7 +83,7 @@ cubism_context.prototype.horizon = function() {
             scale.range([m * height + y0, y0]);
             y0 = scale(0);
 
-            for (var i = 0, n = width; i < n; ++i) {
+            for (var i = 0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
@@ -97,17 +97,24 @@ cubism_context.prototype.horizon = function() {
         }
       }
 
+      function focus(i) {
+        if (i == null) i = width - 1;
+        var value = metric_.valueAt(i);
+        span.datum(value).text(isNaN(value) ? null : format);
+      }
+
       // Display the first metric change immediately,
       // but defer subsequent updates to the canvas change.
       // Note that someone still needs to listen to the metric,
       // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
-        change(start, stop);
+        change(start, stop), focus();
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
 
       // Update the chart when the context changes.
       context.on("change.horizon-" + id, change);
+      context.on("focus.horizon-" + id, focus);
     });
    }
 
