@@ -30,12 +30,13 @@ function cubism_source(context, request) {
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
       if (!steps) return; // already fetched this window; ignore it!
-      values.splice(0, steps);
+      var temp = values.slice(steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
       start0 = start;
       request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
         if (error) return console.warn(error);
-        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) values[j + i] = data[j];
+        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) temp[j + i] = data[j];
+        values = temp;
         event.change.call(metric, start, stop);
       });
     }
