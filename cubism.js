@@ -19,26 +19,35 @@ function cubism_source(context, request) {
 
   source.metric = function(expression) {
     var metric = new cubism_metric(context, expression),
+        id = ".source-metric-" + ++cubism_id,
         start0 = -Infinity,
         step = context.step(),
         size = context.size(),
         values = [],
+        valuesTemp,
         event = d3.dispatch("change"),
-        listening = 0,
-        beforechangeId = "beforechange.source-metric-" + ++cubism_id;
+        listening = 0;
 
+    // Prefetch new data into a temporary array.
     function beforechange(start, stop) {
       var steps = Math.min(size, Math.round((start - start0) / step));
-      if (!steps) return; // already fetched this window; ignore it!
-      var temp = values.slice(steps);
+      if (!steps || valuesTemp) return; // already fetched, or fetching!
+      var temp = valuesTemp = values.slice(steps);
       steps = Math.min(size, steps + cubism_sourceOverlap);
-      start0 = start;
       request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
         if (error) return console.warn(error);
         for (var j = 0, i = size - steps, m = data.length; j < m; ++j) temp[j + i] = data[j];
-        values = temp;
         event.change.call(metric, start, stop);
       });
+    }
+
+    // When the context changes, switch to the new data, ready-or-not!
+    function change(start, stop) {
+      if (start0 - start) {
+        values = valuesTemp;
+        valuesTemp = null;
+        start0 = start;
+      }
     }
 
     //
@@ -56,7 +65,8 @@ function cubism_source(context, request) {
       if (!arguments.length) return event.on(type);
       if (listener == null && event.on(type) != null) --listening;
       if (listener != null && event.on(type) == null) ++listening;
-      context.on(beforechangeId, listening > 0 ? beforechange : null);
+      context.on("beforechange" + id, listening > 0 ? beforechange : null);
+      context.on("change" + id, listening > 0 ? change : null);
       event.on(type, listener);
       return metric;
     };
