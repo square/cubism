@@ -1,8 +1,9 @@
 cubism_context.prototype.horizon = function() {
   var context = this,
       mode = "offset",
-      width = context.size(),
-      height = 30,
+      buffer = document.createElement("canvas"),
+      width = buffer.width = context.size(),
+      height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
       extent = null,
@@ -35,17 +36,33 @@ cubism_context.prototype.horizon = function() {
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
+          max_,
           m = colors_.length >> 1,
           ready;
 
       function change(start, stop) {
-        canvas.clearRect(0, 0, width, height);
+        var i0 = this === context ? width - cubism_sourceOverlap : 0;
 
         // update the domain
         var extent = metric_.extent();
         ready = extent.every(isFinite);
         if (extent_ != null) extent = extent_;
-        scale.domain([0, Math.max(extent[0], extent[1])]);
+        var max = Math.max(extent[0], extent[1]);
+        scale.domain([0, max]);
+
+        // check if the extent changed; if so, we must redraw all
+        if (max != max_) max_ = max, i0 = 0;
+
+        // if this is an update (rather than initial draw), copy old values!
+        if (i0) {
+          var canvas0 = buffer.getContext("2d");
+          canvas0.clearRect(0, 0, width, height);
+          canvas0.drawImage(canvas.canvas, 1, 0, i0, height, 0, 0, i0, height);
+          canvas.clearRect(0, 0, width, height);
+          canvas.drawImage(canvas0.canvas, 0, 0);
+        } else {
+          canvas.clearRect(0, 0, width, height);
+        }
 
         // record whether there are negative values to display
         var negative;
@@ -59,7 +76,7 @@ cubism_context.prototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = 0, n = width, y1; i < n; ++i) {
+          for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
@@ -83,7 +100,7 @@ cubism_context.prototype.horizon = function() {
             scale.range([m * height + y0, y0]);
             y0 = scale(0);
 
-            for (var i = 0, n = width, y1; i < n; ++i) {
+            for (var i = i0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
@@ -126,7 +143,7 @@ cubism_context.prototype.horizon = function() {
 
   horizon.height = function(_) {
     if (!arguments.length) return height;
-    height = +_;
+    buffer.height = height = +_;
     return horizon;
   };
 
