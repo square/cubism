@@ -325,7 +325,7 @@ cubism.context = function() {
     return update();
   };
 
-  //
+  // Sets the focus to the specified index, and dispatches a "focus" event.
   context.focus = function(i) {
     event.focus.call(context, focus = i);
     return context;
@@ -751,9 +751,9 @@ cubism_context.prototype.rule = function() {
         .style("pointer-events", "none");
 
     context.on("focus.rule-" + ++cubism_id, function(i) {
-      if (d3.event) line
+      line
           .style("display", i == null ? "none" : null)
-          .style("left", d3.event.clientX + "px");
+          .style("left", function() { return this.parentNode.offsetLeft - window.scrollX + i + "px"; });
     });
   }
 
