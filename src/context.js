@@ -7,7 +7,7 @@ cubism.context = function() {
       serverDelay = 5e3,
       clientDelay = 5e3,
       event = d3.dispatch("beforechange", "change", "focus"),
-      scale = context.scale = d3.time.scale().range([0, size])
+      scale = context.scale = d3.time.scale().range([0, size]),
       focus;
 
   function update() {
@@ -97,6 +97,19 @@ cubism.context = function() {
 
     return context;
   };
+
+  d3.select(window).on("keydown.context-" + ++cubism_id, function() {
+    switch (d3.event.keyCode) {
+      case 37: // left
+        if (focus == null) focus = size - 1;
+        if (focus > 0) context.focus(--focus);
+        break;
+      case 39: // right
+        if (focus == null) focus = size - 2;
+        if (focus < size - 1) context.focus(++focus);
+        break;
+    }
+  });
 
   return update();
 };
