@@ -24,30 +24,30 @@ function cubism_source(context, request) {
         step = context.step(),
         size = context.size(),
         values = [],
-        valuesNext = values,
         event = d3.dispatch("change"),
         listening = 0,
         fetching;
 
     // Prefetch new data into a temporary array.
-    function beforechange(start1, stop) {
+    function prepare(start1, stop) {
       var steps = Math.min(size, Math.round((start1 - start) / step));
       if (!steps || fetching) return; // already fetched, or fetching!
-      valuesNext = values.slice(steps);
       fetching = true;
-      start = start1;
       steps = Math.min(size, steps + cubism_sourceOverlap);
-      request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
+      var start0 = new Date(stop - steps * step);
+      request(expression, start0, stop, step, function(error, data) {
         fetching = false;
         if (error) return console.warn(error);
-        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) valuesNext[j + i] = data[j];
+        var i = Math.round((start0 - start) / step);
+        for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
         event.change.call(metric, start, stop);
       });
     }
 
     // When the context changes, switch to the new data, ready-or-not!
-    function change(start1, stop) {
-      values = valuesNext;
+    function beforechange(start1, stop) {
+      values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+      start = start1;
     }
 
     //
@@ -65,8 +65,8 @@ function cubism_source(context, request) {
       if (!arguments.length) return event.on(type);
       if (listener == null && event.on(type) != null) --listening;
       if (listener != null && event.on(type) == null) ++listening;
+      context.on("prepare" + id, listening > 0 ? prepare : null);
       context.on("beforechange" + id, listening > 0 ? beforechange : null);
-      context.on("change" + id, listening > 0 ? change : null);
       event.on(type, listener);
       return metric;
     };
@@ -264,10 +264,10 @@ cubism.context = function() {
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
       start0, stop0, // the start and stop for the previous change event
-      start1, stop1, // the start and stop for the next beforechange event
+      start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
-      event = d3.dispatch("beforechange", "change", "focus"),
+      event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       focus;
 
@@ -284,21 +284,22 @@ cubism.context = function() {
   setTimeout(function() {
     var delay = +stop1 + serverDelay - Date.now();
 
-    // If we're too late for the first beforechange event, skip it.
+    // If we're too late for the first prepare event, skip it.
     if (delay < clientDelay) delay += step;
 
-    setTimeout(function beforechange() {
+    setTimeout(function prepare() {
       stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
       start1 = new Date(stop1 - size * step);
-      event.beforechange.call(context, start1, stop1);
+      event.prepare.call(context, start1, stop1);
 
       setTimeout(function() {
         scale.domain([start0 = start1, stop0 = stop1]);
+        event.beforechange.call(context, start1, stop1);
         event.change.call(context, start1, stop1);
         event.focus.call(context, focus);
       }, clientDelay);
 
-      setTimeout(beforechange, step);
+      setTimeout(prepare, step);
     }, delay);
   }, 10);
 
@@ -342,7 +343,7 @@ cubism.context = function() {
     return context;
   };
 
-  // Add, remove or get listeners for "change" and "beforechange" events.
+  // Add, remove or get listeners for events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
     event.on(type, listener);
@@ -351,7 +352,8 @@ cubism.context = function() {
     // This way, metrics can make requests for data immediately,
     // and likewise the axis can display itself synchronously.
     if (listener != null) {
-      if (/^beforechange(\.|$)/.test(type)) listener.call(context, start1, stop1);
+      if (/^prepare(\.|$)/.test(type)) listener.call(context, start1, stop1);
+      if (/^beforechange(\.|$)/.test(type)) listener.call(context, start0, stop0);
       if (/^change(\.|$)/.test(type)) listener.call(context, start0, stop0);
       if (/^focus(\.|$)/.test(type)) listener.call(context, focus);
     }
@@ -427,16 +429,15 @@ cubism_context.prototype.horizon = function() {
           ready;
 
       function change(start1, stop) {
-        var i0 = 0;
+        canvas.save();
 
-        // update the domain
+        // compute the new extent and ready flag
         var extent = metric_.extent();
         ready = extent.every(isFinite);
         if (extent_ != null) extent = extent_;
-        var max = Math.max(extent[0], extent[1]);
-        scale.domain([0, max]);
 
         // if this is an update (with no extent change), copy old values!
+        var i0 = 0, max = Math.max(extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
             i0 = width - cubism_sourceOverlap;
@@ -449,9 +450,11 @@ cubism_context.prototype.horizon = function() {
               canvas.drawImage(canvas0.canvas, 0, 0);
             }
           }
-          max_ = max;
           start = start1;
         }
+
+        // update the domain
+        scale.domain([0, max_ = max]);
 
         // clear for the new data
         canvas.clearRect(i0, 0, width - i0, height);
@@ -478,7 +481,6 @@ cubism_context.prototype.horizon = function() {
         if (negative) {
           // enable offset mode
           if (mode === "offset") {
-            canvas.save();
             canvas.translate(0, height);
             canvas.scale(1, -1);
           }
@@ -498,12 +500,9 @@ cubism_context.prototype.horizon = function() {
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
             }
           }
-
-          // undo offset mode
-          if (mode === "offset") {
-            canvas.restore();
-          }
         }
+
+        canvas.restore();
       }
 
       function focus(i) {
@@ -511,6 +510,10 @@ cubism_context.prototype.horizon = function() {
         var value = metric_.valueAt(i);
         span.datum(value).text(isNaN(value) ? null : format);
       }
+
+      // Update the chart when the context changes.
+      context.on("change.horizon-" + id, change);
+      context.on("focus.horizon-" + id, focus);
 
       // Display the first metric change immediately,
       // but defer subsequent updates to the canvas change.
@@ -520,10 +523,6 @@ cubism_context.prototype.horizon = function() {
         change(start, stop), focus();
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
-
-      // Update the chart when the context changes.
-      context.on("change.horizon-" + id, change);
-      context.on("focus.horizon-" + id, focus);
     });
    }
 

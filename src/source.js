@@ -8,30 +8,30 @@ function cubism_source(context, request) {
         step = context.step(),
         size = context.size(),
         values = [],
-        valuesNext = values,
         event = d3.dispatch("change"),
         listening = 0,
         fetching;
 
     // Prefetch new data into a temporary array.
-    function beforechange(start1, stop) {
+    function prepare(start1, stop) {
       var steps = Math.min(size, Math.round((start1 - start) / step));
       if (!steps || fetching) return; // already fetched, or fetching!
-      valuesNext = values.slice(steps);
       fetching = true;
-      start = start1;
       steps = Math.min(size, steps + cubism_sourceOverlap);
-      request(expression, new Date(stop - steps * step), stop, step, function(error, data) {
+      var start0 = new Date(stop - steps * step);
+      request(expression, start0, stop, step, function(error, data) {
         fetching = false;
         if (error) return console.warn(error);
-        for (var j = 0, i = size - steps, m = data.length; j < m; ++j) valuesNext[j + i] = data[j];
+        var i = Math.round((start0 - start) / step);
+        for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
         event.change.call(metric, start, stop);
       });
     }
 
     // When the context changes, switch to the new data, ready-or-not!
-    function change(start1, stop) {
-      values = valuesNext;
+    function beforechange(start1, stop) {
+      values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+      start = start1;
     }
 
     //
@@ -49,8 +49,8 @@ function cubism_source(context, request) {
       if (!arguments.length) return event.on(type);
       if (listener == null && event.on(type) != null) --listening;
       if (listener != null && event.on(type) == null) ++listening;
+      context.on("prepare" + id, listening > 0 ? prepare : null);
       context.on("beforechange" + id, listening > 0 ? beforechange : null);
-      context.on("change" + id, listening > 0 ? change : null);
       event.on(type, listener);
       return metric;
     };

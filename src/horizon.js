@@ -43,16 +43,15 @@ cubism_context.prototype.horizon = function() {
           ready;
 
       function change(start1, stop) {
-        var i0 = 0;
+        canvas.save();
 
-        // update the domain
+        // compute the new extent and ready flag
         var extent = metric_.extent();
         ready = extent.every(isFinite);
         if (extent_ != null) extent = extent_;
-        var max = Math.max(extent[0], extent[1]);
-        scale.domain([0, max]);
 
         // if this is an update (with no extent change), copy old values!
+        var i0 = 0, max = Math.max(extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
             i0 = width - cubism_sourceOverlap;
@@ -65,9 +64,11 @@ cubism_context.prototype.horizon = function() {
               canvas.drawImage(canvas0.canvas, 0, 0);
             }
           }
-          max_ = max;
           start = start1;
         }
+
+        // update the domain
+        scale.domain([0, max_ = max]);
 
         // clear for the new data
         canvas.clearRect(i0, 0, width - i0, height);
@@ -94,7 +95,6 @@ cubism_context.prototype.horizon = function() {
         if (negative) {
           // enable offset mode
           if (mode === "offset") {
-            canvas.save();
             canvas.translate(0, height);
             canvas.scale(1, -1);
           }
@@ -114,12 +114,9 @@ cubism_context.prototype.horizon = function() {
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
             }
           }
-
-          // undo offset mode
-          if (mode === "offset") {
-            canvas.restore();
-          }
         }
+
+        canvas.restore();
       }
 
       function focus(i) {
@@ -127,6 +124,10 @@ cubism_context.prototype.horizon = function() {
         var value = metric_.valueAt(i);
         span.datum(value).text(isNaN(value) ? null : format);
       }
+
+      // Update the chart when the context changes.
+      context.on("change.horizon-" + id, change);
+      context.on("focus.horizon-" + id, focus);
 
       // Display the first metric change immediately,
       // but defer subsequent updates to the canvas change.
@@ -136,10 +137,6 @@ cubism_context.prototype.horizon = function() {
         change(start, stop), focus();
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
-
-      // Update the chart when the context changes.
-      context.on("change.horizon-" + id, change);
-      context.on("focus.horizon-" + id, focus);
     });
    }
 

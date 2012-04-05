@@ -3,10 +3,10 @@ cubism.context = function() {
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
       start0, stop0, // the start and stop for the previous change event
-      start1, stop1, // the start and stop for the next beforechange event
+      start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
-      event = d3.dispatch("beforechange", "change", "focus"),
+      event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       focus;
 
@@ -23,21 +23,22 @@ cubism.context = function() {
   setTimeout(function() {
     var delay = +stop1 + serverDelay - Date.now();
 
-    // If we're too late for the first beforechange event, skip it.
+    // If we're too late for the first prepare event, skip it.
     if (delay < clientDelay) delay += step;
 
-    setTimeout(function beforechange() {
+    setTimeout(function prepare() {
       stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
       start1 = new Date(stop1 - size * step);
-      event.beforechange.call(context, start1, stop1);
+      event.prepare.call(context, start1, stop1);
 
       setTimeout(function() {
         scale.domain([start0 = start1, stop0 = stop1]);
+        event.beforechange.call(context, start1, stop1);
         event.change.call(context, start1, stop1);
         event.focus.call(context, focus);
       }, clientDelay);
 
-      setTimeout(beforechange, step);
+      setTimeout(prepare, step);
     }, delay);
   }, 10);
 
@@ -81,7 +82,7 @@ cubism.context = function() {
     return context;
   };
 
-  // Add, remove or get listeners for "change" and "beforechange" events.
+  // Add, remove or get listeners for events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
     event.on(type, listener);
@@ -90,7 +91,8 @@ cubism.context = function() {
     // This way, metrics can make requests for data immediately,
     // and likewise the axis can display itself synchronously.
     if (listener != null) {
-      if (/^beforechange(\.|$)/.test(type)) listener.call(context, start1, stop1);
+      if (/^prepare(\.|$)/.test(type)) listener.call(context, start1, stop1);
+      if (/^beforechange(\.|$)/.test(type)) listener.call(context, start0, stop0);
       if (/^change(\.|$)/.test(type)) listener.call(context, start0, stop0);
       if (/^focus(\.|$)/.test(type)) listener.call(context, focus);
     }
