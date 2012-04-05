@@ -31,8 +31,7 @@ function cubism_source(context, request) {
 
     // When the context changes, switch to the new data, ready-or-not!
     function change(start1, stop) {
-      var steps = Math.max(0, Math.min(size, Math.round((start1 - start) / step)));
-      values = steps ? valuesNext.slice(steps) : valuesNext;
+      values = valuesNext;
     }
 
     //

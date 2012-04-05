@@ -47,8 +47,7 @@ function cubism_source(context, request) {
 
     // When the context changes, switch to the new data, ready-or-not!
     function change(start1, stop) {
-      var steps = Math.max(0, Math.min(size, Math.round((start1 - start) / step)));
-      values = steps ? valuesNext.slice(steps) : valuesNext;
+      values = valuesNext;
     }
 
     //
@@ -421,12 +420,14 @@ cubism_context.prototype.horizon = function() {
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
+          start = -Infinity,
+          step = context.step(),
           max_,
           m = colors_.length >> 1,
           ready;
 
-      function change(start, stop) {
-        var i0 = this === context ? width - cubism_sourceOverlap : 0;
+      function change(start1, stop) {
+        var i0 = 0;
 
         // update the domain
         var extent = metric_.extent();
@@ -435,19 +436,25 @@ cubism_context.prototype.horizon = function() {
         var max = Math.max(extent[0], extent[1]);
         scale.domain([0, max]);
 
-        // check if the extent changed; if so, we must redraw all
-        if (max != max_) max_ = max, i0 = 0;
-
-        // if this is an update (rather than initial draw), copy old values!
-        if (i0) {
-          var canvas0 = buffer.getContext("2d");
-          canvas0.clearRect(0, 0, width, height);
-          canvas0.drawImage(canvas.canvas, 1, 0, i0, height, 0, 0, i0, height);
-          canvas.clearRect(0, 0, width, height);
-          canvas.drawImage(canvas0.canvas, 0, 0);
-        } else {
-          canvas.clearRect(0, 0, width, height);
+        // if this is an update (with no extent change), copy old values!
+        if (this === context) {
+          if (max == max_) {
+            i0 = width - cubism_sourceOverlap;
+            var dx = (start1 - start) / step;
+            if (dx < width) {
+              var canvas0 = buffer.getContext("2d");
+              canvas0.clearRect(0, 0, width, height);
+              canvas0.drawImage(canvas.canvas, dx, 0, width - dx, height, 0, 0, width - dx, height);
+              canvas.clearRect(0, 0, width, height);
+              canvas.drawImage(canvas0.canvas, 0, 0);
+            }
+          }
+          max_ = max;
+          start = start1;
         }
+
+        // clear for the new data
+        canvas.clearRect(i0, 0, width - i0, height);
 
         // record whether there are negative values to display
         var negative;
