@@ -437,7 +437,7 @@ cubism_context.prototype.horizon = function() {
         if (extent_ != null) extent = extent_;
 
         // if this is an update (with no extent change), copy old values!
-        var i0 = 0, max = Math.max(extent[0], extent[1]);
+        var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
             i0 = width - cubism_sourceOverlap;
