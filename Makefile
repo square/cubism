@@ -10,11 +10,12 @@ cubism.v0.js: \
 	src/id.js \
 	src/identity.js \
 	src/option.js \
-	src/source.js \
-	src/metric.js \
+	src/context.js \
 	src/cube.js \
 	src/graphite.js \
-	src/context.js \
+	src/metric.js \
+	src/metric-constant.js \
+	src/metric-operator.js \
 	src/horizon.js \
 	src/comparison.js \
 	src/axis.js \

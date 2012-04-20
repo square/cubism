@@ -1,4 +1,4 @@
-cubism_context.prototype.rule = function() {
+cubism_contextPrototype.rule = function() {
   var context = this;
 
   function rule(selection) {

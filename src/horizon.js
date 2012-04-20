@@ -1,4 +1,4 @@
-cubism_context.prototype.horizon = function() {
+cubism_contextPrototype.horizon = function() {
   var context = this,
       mode = "offset",
       buffer = document.createElement("canvas"),
@@ -54,7 +54,7 @@ cubism_context.prototype.horizon = function() {
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
-            i0 = width - cubism_sourceOverlap;
+            i0 = width - cubism_metricOverlap;
             var dx = (start1 - start) / step;
             if (dx < width) {
               var canvas0 = buffer.getContext("2d");

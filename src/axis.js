@@ -1,4 +1,4 @@
-cubism_context.prototype.axis = function() {
+cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
       axis_ = d3.svg.axis().scale(scale),

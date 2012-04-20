@@ -1,4 +1,4 @@
-cubism_context.prototype.comparison = function() {
+cubism_contextPrototype.comparison = function() {
   var context = this,
       width = context.size(),
       height = 120,

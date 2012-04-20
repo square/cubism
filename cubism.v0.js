@@ -14,251 +14,6 @@ cubism.option = function(name, value) {
   }
   return value;
 };
-function cubism_source(context, request) {
-  var source = {};
-
-  source.metric = function(expression) {
-    var metric = new cubism_metric(context, expression),
-        id = ".source-metric-" + ++cubism_id,
-        start = -Infinity,
-        step = context.step(),
-        size = context.size(),
-        values = [],
-        event = d3.dispatch("change"),
-        listening = 0,
-        fetching;
-
-    // Prefetch new data into a temporary array.
-    function prepare(start1, stop) {
-      var steps = Math.min(size, Math.round((start1 - start) / step));
-      if (!steps || fetching) return; // already fetched, or fetching!
-      fetching = true;
-      steps = Math.min(size, steps + cubism_sourceOverlap);
-      var start0 = new Date(stop - steps * step);
-      request(expression, start0, stop, step, function(error, data) {
-        fetching = false;
-        if (error) return console.warn(error);
-        var i = Math.round((start0 - start) / step);
-        for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
-        event.change.call(metric, start, stop);
-      });
-    }
-
-    // When the context changes, switch to the new data, ready-or-not!
-    function beforechange(start1, stop) {
-      values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
-      start = start1;
-    }
-
-    //
-    metric.valueAt = function(i) {
-      return values[i];
-    };
-
-    //
-    metric.shift = function(offset) {
-      return cubism_source(context, cubism_sourceShift(request, +offset)).metric(expression);
-    };
-
-    //
-    metric.on = function(type, listener) {
-      if (!arguments.length) return event.on(type);
-      if (listener == null && event.on(type) != null) --listening;
-      if (listener != null && event.on(type) == null) ++listening;
-      context.on("prepare" + id, listening > 0 ? prepare : null);
-      context.on("beforechange" + id, listening > 0 ? beforechange : null);
-      event.on(type, listener);
-      return metric;
-    };
-
-    return metric;
-  };
-
-  return source;
-}
-
-// Number of metric to refetch each period, in case of lag.
-var cubism_sourceOverlap = 6;
-
-// Wraps the specified request implementation, and shifts time by the given offset.
-function cubism_sourceShift(request, offset) {
-  return function(expression, start, stop, step, callback) {
-    request(expression, new Date(+start + offset), new Date(+stop + offset), step, callback);
-  };
-}
-function cubism_metric(context, expression) {
-  if (!(context instanceof cubism_context)) throw new Error("invalid context");
-  expression = expression + "";
-  this.context = context;
-  this.toString = function() { return expression; };
-}
-
-var cubism_metricPrototype = cubism_metric.prototype;
-
-cubism_metricPrototype.valueAt = function() {
-  return NaN;
-};
-
-cubism_metricPrototype.extent = function() {
-  var i = 0,
-      n = this.context.size(),
-      value,
-      min = Infinity,
-      max = -Infinity;
-  while (++i < n) {
-    value = this.valueAt(i);
-    if (value < min) min = value;
-    if (value > max) max = value;
-  }
-  return [min, max];
-};
-
-cubism_metricPrototype.on = function(type, listener) {
-  return arguments.length < 2 ? null : this;
-};
-
-cubism_metricPrototype.add = cubism_metricOperator("+", function(left, right) {
-  return left + right;
-});
-
-cubism_metricPrototype.subtract = cubism_metricOperator("-", function(left, right) {
-  return left - right;
-});
-
-cubism_metricPrototype.multiply = cubism_metricOperator("*", function(left, right) {
-  return left * right;
-});
-
-cubism_metricPrototype.divide = cubism_metricOperator("/", function(left, right) {
-  return left / right;
-});
-
-cubism_metricPrototype.shift = function() {
-  return this;
-};
-
-cubism_metricPrototype.on = function() {
-  return arguments.length < 2 ? null : this;
-};
-
-function cubism_metricOperator(name, operate) {
-
-  function cubism_metricOperator(left, right) {
-    if (!(right instanceof cubism_metric)) right = new cubism_metricConstant(left.context, right);
-    else if (left.context !== right.context) throw new Error("mismatch context");
-    cubism_metric.call(this, left.context, left + " " + name + " " + right);
-    this.left = left;
-    this.right = right;
-  }
-
-  var cubism_metricOperatorPrototype = cubism_metricOperator.prototype = Object.create(cubism_metric.prototype);
-
-  cubism_metricOperatorPrototype.valueAt = function(i) {
-    return operate(this.left.valueAt(i), this.right.valueAt(i));
-  };
-
-  cubism_metricOperatorPrototype.shift = function(offset) {
-    return new cubism_metricOperator(this.left.shift(offset), this.right.shift(offset));
-  };
-
-  cubism_metricOperatorPrototype.on = function(type, listener) {
-    if (arguments.length < 2) return this.left.on(type);
-    this.left.on(type, listener);
-    this.right.on(type, listener);
-    return this;
-  };
-
-  return function(right) {
-    return new cubism_metricOperator(this, right);
-  };
-}
-
-function cubism_metricConstant(context, value) {
-  cubism_metric.call(this, context, value = +value);
-  this.valueOf = function() { return value; };
-}
-
-var cubism_metricConstantPrototype = cubism_metricConstant.prototype = Object.create(cubism_metric.prototype);
-
-cubism_metricConstantPrototype.valueAt = function() {
-  return +this;
-};
-
-cubism_metricConstantPrototype.extent = function() {
-  return [+this, +this];
-};
-cubism_context.prototype.cube = function(host) {
-  if (!arguments.length) host = "";
-
-  var source = cubism_source(this, function(expression, start, stop, step, callback) {
-    d3.json(host + "/1.0/metric"
-        + "?expression=" + encodeURIComponent(expression)
-        + "&start=" + cubism_cubeFormatDate(start)
-        + "&stop=" + cubism_cubeFormatDate(stop)
-        + "&step=" + step, function(data) {
-      if (!data) return callback(new Error("unable to load data"));
-      callback(null, data.map(function(d) { return d.value; }));
-    });
-  });
-
-  // Returns the Cube host.
-  source.toString = function() {
-    return host;
-  };
-
-  return source;
-};
-
-var cubism_cubeFormatDate = d3.time.format.iso;
-cubism_context.prototype.graphite = function(host) {
-  if (!arguments.length) host = "";
-
-  var source = cubism_source(this, function(expression, start, stop, step, callback) {
-    d3.text(host + "/render?format=raw"
-        + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
-        + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
-        + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
-      if (!text) return callback(new Error("unable to load data"));
-      callback(null, cubism_graphiteParse(text));
-    });
-  });
-
-  source.find = function(pattern, callback) {
-    d3.json(host + "/metrics/find?format=completer"
-        + "&query=" + encodeURIComponent(pattern), function(result) {
-      if (!result) return callback(new Error("unable to find metrics"));
-      callback(null, result.metrics.map(function(d) { return d.path; }));
-    });
-  };
-
-  // Returns the graphite host.
-  source.toString = function() {
-    return host;
-  };
-
-  return source;
-};
-
-// Graphite understands seconds since UNIX epoch.
-function cubism_graphiteFormatDate(time) {
-  return Math.floor(time / 1000);
-}
-
-// Helper method for parsing graphite's raw format.
-function cubism_graphiteParse(text) {
-  var i = text.indexOf("|"),
-      meta = text.substring(0, i),
-      c = meta.lastIndexOf(","),
-      b = meta.lastIndexOf(",", c - 1),
-      a = meta.lastIndexOf(",", b - 1),
-      start = meta.substring(a + 1, b) * 1000,
-      step = meta.substring(c + 1) * 1000;
-  return text
-      .substring(i + 1)
-      .split(",")
-      .slice(1) // the first value is always None?
-      .map(function(d) { return +d; });
-}
 cubism.context = function() {
   var context = new cubism_context,
       step = 1e4, // ten seconds, in milliseconds
@@ -381,10 +136,266 @@ cubism.context = function() {
 
 function cubism_context() {}
 
-cubism_context.prototype.constant = function(value) {
+var cubism_contextPrototype = cubism_context.prototype;
+
+cubism_contextPrototype.constant = function(value) {
   return new cubism_metricConstant(this, +value);
 };
-cubism_context.prototype.horizon = function() {
+cubism_contextPrototype.cube = function(host) {
+  if (!arguments.length) host = "";
+  var source = {},
+      context = this;
+
+  source.metric = function(expression) {
+    return context.metric(function(start, stop, step, callback) {
+      d3.json(host + "/1.0/metric"
+          + "?expression=" + encodeURIComponent(expression)
+          + "&start=" + cubism_cubeFormatDate(start)
+          + "&stop=" + cubism_cubeFormatDate(stop)
+          + "&step=" + step, function(data) {
+        if (!data) return callback(new Error("unable to load data"));
+        callback(null, data.map(function(d) { return d.value; }));
+      });
+    }, expression += "");
+  };
+
+  // Returns the Cube host.
+  source.toString = function() {
+    return host;
+  };
+
+  return source;
+};
+
+var cubism_cubeFormatDate = d3.time.format.iso;
+cubism_contextPrototype.graphite = function(host) {
+  if (!arguments.length) host = "";
+  var source = {},
+      context = this;
+
+  source.metric = function(expression) {
+    return context.metric(function(start, stop, step, callback) {
+      d3.text(host + "/render?format=raw"
+          + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
+          + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
+          + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
+        if (!text) return callback(new Error("unable to load data"));
+        callback(null, cubism_graphiteParse(text));
+      });
+    }, expression += "");
+  };
+
+  source.find = function(pattern, callback) {
+    d3.json(host + "/metrics/find?format=completer"
+        + "&query=" + encodeURIComponent(pattern), function(result) {
+      if (!result) return callback(new Error("unable to find metrics"));
+      callback(null, result.metrics.map(function(d) { return d.path; }));
+    });
+  };
+
+  // Returns the graphite host.
+  source.toString = function() {
+    return host;
+  };
+
+  return source;
+};
+
+// Graphite understands seconds since UNIX epoch.
+function cubism_graphiteFormatDate(time) {
+  return Math.floor(time / 1000);
+}
+
+// Helper method for parsing graphite's raw format.
+function cubism_graphiteParse(text) {
+  var i = text.indexOf("|"),
+      meta = text.substring(0, i),
+      c = meta.lastIndexOf(","),
+      b = meta.lastIndexOf(",", c - 1),
+      a = meta.lastIndexOf(",", b - 1),
+      start = meta.substring(a + 1, b) * 1000,
+      step = meta.substring(c + 1) * 1000;
+  return text
+      .substring(i + 1)
+      .split(",")
+      .slice(1) // the first value is always None?
+      .map(function(d) { return +d; });
+}
+function cubism_metric(context) {
+  if (!(context instanceof cubism_context)) throw new Error("invalid context");
+  this.context = context;
+}
+
+var cubism_metricPrototype = cubism_metric.prototype;
+
+cubism_metricPrototype.valueAt = function() {
+  return NaN;
+};
+
+cubism_metricPrototype.extent = function() {
+  var i = 0,
+      n = this.context.size(),
+      value,
+      min = Infinity,
+      max = -Infinity;
+  while (++i < n) {
+    value = this.valueAt(i);
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  return [min, max];
+};
+
+cubism_metricPrototype.on = function(type, listener) {
+  return arguments.length < 2 ? null : this;
+};
+
+cubism_metricPrototype.shift = function() {
+  return this;
+};
+
+cubism_metricPrototype.on = function() {
+  return arguments.length < 2 ? null : this;
+};
+
+cubism_contextPrototype.metric = function(request, name) {
+  var context = this,
+      metric = new cubism_metric(context),
+      id = ".metric-" + ++cubism_id,
+      start = -Infinity,
+      step = context.step(),
+      size = context.size(),
+      values = [],
+      event = d3.dispatch("change"),
+      listening = 0,
+      fetching;
+
+  // Prefetch new data into a temporary array.
+  function prepare(start1, stop) {
+    var steps = Math.min(size, Math.round((start1 - start) / step));
+    if (!steps || fetching) return; // already fetched, or fetching!
+    fetching = true;
+    steps = Math.min(size, steps + cubism_metricOverlap);
+    var start0 = new Date(stop - steps * step);
+    request(start0, stop, step, function(error, data) {
+      fetching = false;
+      if (error) return console.warn(error);
+      var i = Math.round((start0 - start) / step);
+      for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
+      event.change.call(metric, start, stop);
+    });
+  }
+
+  // When the context changes, switch to the new data, ready-or-not!
+  function beforechange(start1, stop) {
+    values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+    start = start1;
+  }
+
+  //
+  metric.valueAt = function(i) {
+    return values[i];
+  };
+
+  //
+  metric.shift = function(offset) {
+    return context.metric(cubism_metricShift(request, +offset));
+  };
+
+  //
+  metric.on = function(type, listener) {
+    if (!arguments.length) return event.on(type);
+    if (listener == null && event.on(type) != null) --listening;
+    if (listener != null && event.on(type) == null) ++listening;
+    context.on("prepare" + id, listening > 0 ? prepare : null);
+    context.on("beforechange" + id, listening > 0 ? beforechange : null);
+    event.on(type, listener);
+    return metric;
+  };
+
+  //
+  if (arguments.length > 1) metric.toString = function() {
+    return name;
+  };
+
+  return metric;
+};
+
+// Number of metric to refetch each period, in case of lag.
+var cubism_metricOverlap = 6;
+
+// Wraps the specified request implementation, and shifts time by the given offset.
+function cubism_metricShift(request, offset) {
+  return function(start, stop, step, callback) {
+    request(new Date(+start + offset), new Date(+stop + offset), step, callback);
+  };
+}
+function cubism_metricConstant(context, value) {
+  cubism_metric.call(this, context);
+  value = +value;
+  var name = value + "";
+  this.valueOf = function() { return value; };
+  this.toString = function() { return name; };
+}
+
+var cubism_metricConstantPrototype = cubism_metricConstant.prototype = Object.create(cubism_metric.prototype);
+
+cubism_metricConstantPrototype.valueAt = function() {
+  return +this;
+};
+
+cubism_metricConstantPrototype.extent = function() {
+  return [+this, +this];
+};
+function cubism_metricOperator(name, operate) {
+
+  function cubism_metricOperator(left, right) {
+    if (!(right instanceof cubism_metric)) right = new cubism_metricConstant(left.context, right);
+    else if (left.context !== right.context) throw new Error("mismatch context");
+    cubism_metric.call(this, left.context);
+    this.left = left;
+    this.right = right;
+    this.toString = function() { return left + " " + name + " " + right; };
+  }
+
+  var cubism_metricOperatorPrototype = cubism_metricOperator.prototype = Object.create(cubism_metric.prototype);
+
+  cubism_metricOperatorPrototype.valueAt = function(i) {
+    return operate(this.left.valueAt(i), this.right.valueAt(i));
+  };
+
+  cubism_metricOperatorPrototype.shift = function(offset) {
+    return new cubism_metricOperator(this.left.shift(offset), this.right.shift(offset));
+  };
+
+  cubism_metricOperatorPrototype.on = function(type, listener) {
+    if (arguments.length < 2) return this.left.on(type);
+    this.left.on(type, listener);
+    this.right.on(type, listener);
+    return this;
+  };
+
+  return function(right) {
+    return new cubism_metricOperator(this, right);
+  };
+}
+
+cubism_metricPrototype.add = cubism_metricOperator("+", function(left, right) {
+  return left + right;
+});
+
+cubism_metricPrototype.subtract = cubism_metricOperator("-", function(left, right) {
+  return left - right;
+});
+
+cubism_metricPrototype.multiply = cubism_metricOperator("*", function(left, right) {
+  return left * right;
+});
+
+cubism_metricPrototype.divide = cubism_metricOperator("/", function(left, right) {
+  return left / right;
+});
+cubism_contextPrototype.horizon = function() {
   var context = this,
       mode = "offset",
       buffer = document.createElement("canvas"),
@@ -440,7 +451,7 @@ cubism_context.prototype.horizon = function() {
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
-            i0 = width - cubism_sourceOverlap;
+            i0 = width - cubism_metricOverlap;
             var dx = (start1 - start) / step;
             if (dx < width) {
               var canvas0 = buffer.getContext("2d");
@@ -576,7 +587,7 @@ cubism_context.prototype.horizon = function() {
 
   return horizon;
 };
-cubism_context.prototype.comparison = function() {
+cubism_contextPrototype.comparison = function() {
   var context = this,
       width = context.size(),
       height = 120,
@@ -769,7 +780,7 @@ cubism_context.prototype.comparison = function() {
 
 var cubism_comparisonPrimaryFormat = d3.format(".2s"),
     cubism_comparisonChangeFormat = d3.format("+.0%");
-cubism_context.prototype.axis = function() {
+cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
       axis_ = d3.svg.axis().scale(scale),
@@ -822,7 +833,7 @@ cubism_context.prototype.axis = function() {
 
 var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
     cubism_axisFormatMinutes = d3.time.format("%I:%M %p");
-cubism_context.prototype.rule = function() {
+cubism_contextPrototype.rule = function() {
   var context = this;
 
   function rule(selection) {

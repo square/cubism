@@ -1,6 +1,6 @@
 var util = require("util"),
     d3 = require("d3"),
-    cubism = require("../cubism").cubism;
+    cubism = require("../cubism.v0").cubism;
 
 util.puts(JSON.stringify({
   "name": "cubism",
