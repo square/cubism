@@ -309,11 +309,16 @@ cubism_contextPrototype.metric = function(request, name) {
   metric.on = function(type, listener) {
     if (!arguments.length) return event.on(type);
 
-    // Avoid an infinite loop by carefully changing registered listeners.
-    if (listener == null && event.on(type) != null) {
-      if (--listening == 0) context.on("prepare" + id, null).on("beforechange" + id, null);
-    } else if (listener != null && event.on(type) == null) {
-      if (++listening == 1) context.on("prepare" + id, prepare).on("beforechange" + id, beforechange);
+    // If there are no listeners, then stop listening to the context,
+    // and avoid unnecessary fetches.
+    if (listener == null) {
+      if (event.on(type) != null && --listening == 0) {
+        context.on("prepare" + id, null).on("beforechange" + id, null);
+      }
+    } else {
+      if (event.on(type) == null && ++listening == 1) {
+        context.on("prepare" + id, prepare).on("beforechange" + id, beforechange);
+      }
     }
 
     event.on(type, listener);
