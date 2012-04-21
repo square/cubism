@@ -31,16 +31,19 @@ cubism_contextPrototype.horizon = function() {
     selection.each(function(d, i) {
       var that = this,
           id = ++cubism_id,
-          canvas = d3.select(that).select("canvas").node().getContext("2d"),
-          span = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
           start = -Infinity,
           step = context.step(),
+          canvas = d3.select(that).select("canvas"),
+          span = d3.select(that).select(".value"),
           max_,
           m = colors_.length >> 1,
           ready;
+
+      canvas.datum({id: id, metric: metric_});
+      canvas = canvas.node().getContext("2d");
 
       function change(start1, stop) {
         canvas.save();
@@ -138,7 +141,27 @@ cubism_contextPrototype.horizon = function() {
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
     });
-   }
+  }
+
+  horizon.remove = function(selection) {
+
+    selection
+        .on("mousemove.horizon", null)
+        .on("mouseout.horizon", null);
+
+    selection.selectAll("canvas")
+        .each(remove)
+        .remove();
+
+    selection.selectAll(".title,.value")
+        .remove();
+
+    function remove(d) {
+      d.metric.on("change.horizon-" + d.id, null);
+      context.on("change.horizon-" + d.id, null);
+      context.on("focus.horizon-" + d.id, null);
+    }
+  };
 
   horizon.mode = function(_) {
     if (!arguments.length) return mode;

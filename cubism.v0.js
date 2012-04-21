@@ -24,6 +24,7 @@ cubism.context = function() {
       clientDelay = 5e3,
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
+      timeout,
       focus;
 
   function update() {
@@ -36,13 +37,14 @@ cubism.context = function() {
     return context;
   }
 
-  setTimeout(function() {
+  context.start = function() {
+    if (timeout) clearTimeout(timeout);
     var delay = +stop1 + serverDelay - Date.now();
 
     // If we're too late for the first prepare event, skip it.
     if (delay < clientDelay) delay += step;
 
-    setTimeout(function prepare() {
+    timeout = setTimeout(function prepare() {
       stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
       start1 = new Date(stop1 - size * step);
       event.prepare.call(context, start1, stop1);
@@ -54,9 +56,17 @@ cubism.context = function() {
         event.focus.call(context, focus);
       }, clientDelay);
 
-      setTimeout(prepare, step);
+      timeout = setTimeout(prepare, step);
     }, delay);
-  }, 10);
+    return context;
+  };
+
+  context.stop = function() {
+    timeout = clearTimeout(timeout);
+    return context;
+  };
+
+  timeout = setTimeout(context.start, 10);
 
   // Set or get the step interval in milliseconds.
   // Defaults to ten seconds.
@@ -101,6 +111,7 @@ cubism.context = function() {
   // Add, remove or get listeners for events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
+
     event.on(type, listener);
 
     // Notify the listener of the current start and stop time, as appropriate.
@@ -447,16 +458,19 @@ cubism_contextPrototype.horizon = function() {
     selection.each(function(d, i) {
       var that = this,
           id = ++cubism_id,
-          canvas = d3.select(that).select("canvas").node().getContext("2d"),
-          span = d3.select(that).select(".value"),
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
           start = -Infinity,
           step = context.step(),
+          canvas = d3.select(that).select("canvas"),
+          span = d3.select(that).select(".value"),
           max_,
           m = colors_.length >> 1,
           ready;
+
+      canvas.datum({id: id, metric: metric_});
+      canvas = canvas.node().getContext("2d");
 
       function change(start1, stop) {
         canvas.save();
@@ -554,7 +568,27 @@ cubism_contextPrototype.horizon = function() {
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
     });
-   }
+  }
+
+  horizon.remove = function(selection) {
+
+    selection
+        .on("mousemove.horizon", null)
+        .on("mouseout.horizon", null);
+
+    selection.selectAll("canvas")
+        .each(remove)
+        .remove();
+
+    selection.selectAll(".title,.value")
+        .remove();
+
+    function remove(d) {
+      d.metric.on("change.horizon-" + d.id, null);
+      context.on("change.horizon-" + d.id, null);
+      context.on("focus.horizon-" + d.id, null);
+    }
+  };
 
   horizon.mode = function(_) {
     if (!arguments.length) return mode;
@@ -643,14 +677,17 @@ cubism_contextPrototype.comparison = function() {
     selection.each(function(d, i) {
       var that = this,
           id = ++cubism_id,
-          div = d3.select(that),
-          canvas = div.select("canvas").node().getContext("2d"),
-          spanPrimary = div.select(".value.primary"),
-          spanChange = div.select(".value.change"),
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
           secondary_ = typeof secondary === "function" ? secondary.call(that, d, i) : secondary,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
+          div = d3.select(that),
+          canvas = div.select("canvas"),
+          spanPrimary = div.select(".value.primary"),
+          spanChange = div.select(".value.change"),
           ready;
+
+      canvas.datum({id: id, primary: primary_, secondary: secondary_});
+      canvas = canvas.node().getContext("2d");
 
       function change(start, stop) {
         canvas.save();
@@ -732,7 +769,28 @@ cubism_contextPrototype.comparison = function() {
       context.on("change.comparison-" + id, change);
       context.on("focus.comparison-" + id, focus);
     });
-   }
+  }
+
+  comparison.remove = function(selection) {
+
+    selection
+        .on("mousemove.comparison", null)
+        .on("mouseout.comparison", null);
+
+    selection.selectAll("canvas")
+        .each(remove)
+        .remove();
+
+    selection.selectAll(".title,.value")
+        .remove();
+
+    function remove(d) {
+      d.primary.on("change.comparison-" + d.id, null);
+      d.secondary.on("change.comparison-" + d.id, null);
+      context.on("change.comparison-" + d.id, null);
+      context.on("focus.comparison-" + d.id, null);
+    }
+  };
 
   comparison.height = function(_) {
     if (!arguments.length) return height;
@@ -810,6 +868,7 @@ cubism_contextPrototype.axis = function() {
         tick;
 
     var g = selection.append("svg")
+        .datum({id: id})
         .attr("width", context.size())
         .attr("height", Math.max(28, -axis.tickSize()))
       .append("g")
@@ -841,6 +900,18 @@ cubism_contextPrototype.axis = function() {
     }
   }
 
+  axis.remove = function(selection) {
+
+    selection.selectAll("svg")
+        .each(remove)
+        .remove();
+
+    function remove(d) {
+      context.on("change.axis-" + d.id, null);
+      context.on("focus.axis-" + d.id, null);
+    }
+  };
+
   return d3.rebind(axis, axis_,
       "orient",
       "ticks",
@@ -856,7 +927,10 @@ cubism_contextPrototype.rule = function() {
   var context = this;
 
   function rule(selection) {
+    var id = ++cubism_id;
+
     var line = selection.append("div")
+        .datum({id: id})
         .attr("class", "line")
         .style("position", "fixed")
         .style("top", 0)
@@ -865,12 +939,23 @@ cubism_contextPrototype.rule = function() {
         .style("width", "1px")
         .style("pointer-events", "none");
 
-    context.on("focus.rule-" + ++cubism_id, function(i) {
+    context.on("focus.rule-" + id, function(i) {
       line
           .style("display", i == null ? "none" : null)
           .style("left", function() { return this.parentNode.getBoundingClientRect().left + i + "px"; });
     });
   }
+
+  rule.remove = function(selection) {
+
+    selection.selectAll(".line")
+        .each(remove)
+        .remove();
+
+    function remove(d) {
+      context.on("focus.rule-" + d.id, null);
+    }
+  };
 
   return rule;
 };

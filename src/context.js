@@ -8,6 +8,7 @@ cubism.context = function() {
       clientDelay = 5e3,
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
+      timeout,
       focus;
 
   function update() {
@@ -20,13 +21,14 @@ cubism.context = function() {
     return context;
   }
 
-  setTimeout(function() {
+  context.start = function() {
+    if (timeout) clearTimeout(timeout);
     var delay = +stop1 + serverDelay - Date.now();
 
     // If we're too late for the first prepare event, skip it.
     if (delay < clientDelay) delay += step;
 
-    setTimeout(function prepare() {
+    timeout = setTimeout(function prepare() {
       stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
       start1 = new Date(stop1 - size * step);
       event.prepare.call(context, start1, stop1);
@@ -38,9 +40,17 @@ cubism.context = function() {
         event.focus.call(context, focus);
       }, clientDelay);
 
-      setTimeout(prepare, step);
+      timeout = setTimeout(prepare, step);
     }, delay);
-  }, 10);
+    return context;
+  };
+
+  context.stop = function() {
+    timeout = clearTimeout(timeout);
+    return context;
+  };
+
+  timeout = setTimeout(context.start, 10);
 
   // Set or get the step interval in milliseconds.
   // Defaults to ten seconds.
@@ -85,6 +95,7 @@ cubism.context = function() {
   // Add, remove or get listeners for events.
   context.on = function(type, listener) {
     if (arguments.length < 2) return event.on(type);
+
     event.on(type, listener);
 
     // Notify the listener of the current start and stop time, as appropriate.

@@ -9,6 +9,7 @@ cubism_contextPrototype.axis = function() {
         tick;
 
     var g = selection.append("svg")
+        .datum({id: id})
         .attr("width", context.size())
         .attr("height", Math.max(28, -axis.tickSize()))
       .append("g")
@@ -39,6 +40,18 @@ cubism_contextPrototype.axis = function() {
           .text(null);
     }
   }
+
+  axis.remove = function(selection) {
+
+    selection.selectAll("svg")
+        .each(remove)
+        .remove();
+
+    function remove(d) {
+      context.on("change.axis-" + d.id, null);
+      context.on("focus.axis-" + d.id, null);
+    }
+  };
 
   return d3.rebind(axis, axis_,
       "orient",

@@ -35,14 +35,17 @@ cubism_contextPrototype.comparison = function() {
     selection.each(function(d, i) {
       var that = this,
           id = ++cubism_id,
-          div = d3.select(that),
-          canvas = div.select("canvas").node().getContext("2d"),
-          spanPrimary = div.select(".value.primary"),
-          spanChange = div.select(".value.change"),
           primary_ = typeof primary === "function" ? primary.call(that, d, i) : primary,
           secondary_ = typeof secondary === "function" ? secondary.call(that, d, i) : secondary,
           extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
+          div = d3.select(that),
+          canvas = div.select("canvas"),
+          spanPrimary = div.select(".value.primary"),
+          spanChange = div.select(".value.change"),
           ready;
+
+      canvas.datum({id: id, primary: primary_, secondary: secondary_});
+      canvas = canvas.node().getContext("2d");
 
       function change(start, stop) {
         canvas.save();
@@ -124,7 +127,28 @@ cubism_contextPrototype.comparison = function() {
       context.on("change.comparison-" + id, change);
       context.on("focus.comparison-" + id, focus);
     });
-   }
+  }
+
+  comparison.remove = function(selection) {
+
+    selection
+        .on("mousemove.comparison", null)
+        .on("mouseout.comparison", null);
+
+    selection.selectAll("canvas")
+        .each(remove)
+        .remove();
+
+    selection.selectAll(".title,.value")
+        .remove();
+
+    function remove(d) {
+      d.primary.on("change.comparison-" + d.id, null);
+      d.secondary.on("change.comparison-" + d.id, null);
+      context.on("change.comparison-" + d.id, null);
+      context.on("focus.comparison-" + d.id, null);
+    }
+  };
 
   comparison.height = function(_) {
     if (!arguments.length) return height;
