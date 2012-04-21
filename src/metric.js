@@ -40,6 +40,7 @@ cubism_contextPrototype.metric = function(request, name) {
       metric = new cubism_metric(context),
       id = ".metric-" + ++cubism_id,
       start = -Infinity,
+      stop,
       step = context.step(),
       size = context.size(),
       values = [],
@@ -57,16 +58,18 @@ cubism_contextPrototype.metric = function(request, name) {
     request(start0, stop, step, function(error, data) {
       fetching = false;
       if (error) return console.warn(error);
-      var i = Math.round((start0 - start) / step);
+      var i = isFinite(start) ? Math.round((start0 - start) / step) : 0;
       for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
       event.change.call(metric, start, stop);
     });
   }
 
   // When the context changes, switch to the new data, ready-or-not!
-  function beforechange(start1, stop) {
+  function beforechange(start1, stop1) {
+    if (!isFinite(start)) start = start1;
     values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
     start = start1;
+    stop = stop1;
   }
 
   //
@@ -82,11 +85,22 @@ cubism_contextPrototype.metric = function(request, name) {
   //
   metric.on = function(type, listener) {
     if (!arguments.length) return event.on(type);
-    if (listener == null && event.on(type) != null) --listening;
-    if (listener != null && event.on(type) == null) ++listening;
-    context.on("prepare" + id, listening > 0 ? prepare : null);
-    context.on("beforechange" + id, listening > 0 ? beforechange : null);
+
+    // Avoid an infinite loop by carefully changing registered listeners.
+    if (listener == null && event.on(type) != null) {
+      if (--listening == 0) context.on("prepare" + id, null).on("beforechange" + id, null);
+    } else if (listener != null && event.on(type) == null) {
+      if (++listening == 1) context.on("prepare" + id, prepare).on("beforechange" + id, beforechange);
+    }
+
     event.on(type, listener);
+
+    // Notify the listener of the current start and stop time, as appropriate.
+    // This way, charts can display synchronous metrics immediately.
+    if (listener != null) {
+      if (/^change(\.|$)/.test(type)) listener.call(context, start, stop);
+    }
+
     return metric;
   };
 
