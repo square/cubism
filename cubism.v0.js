@@ -894,7 +894,7 @@ cubism_contextPrototype.axis = function() {
     });
 
     function cloneTick() {
-      return g.select(function() { return this.appendChild(g.select("text").node().cloneNode()); })
+      return g.select(function() { return this.appendChild(g.select("text").node().cloneNode(true)); })
           .style("display", "none")
           .text(null);
     }
