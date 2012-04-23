@@ -1,18 +1,18 @@
 var util = require("util"),
     d3 = require("d3"),
-    cubism = require("../cubism.v0").cubism;
+    cubism = require("../cubism.v1").cubism;
 
 util.puts(JSON.stringify({
   "name": "cubism",
   "version": cubism.version,
-  "private": true,
+  "description": "A JavaScript library for time series visualization.",
+  "keywords": ["time series", "visualization", "d3"],
+  "homepage": "http://square.github.com/cubism/",
+  "author": {"name": "Mike Bostock", "url": "http://bost.ocks.org/mike"},
+  "repository": {"type": "git", "url": "http://github.com/square/cubism.git"},
   "main": "./index.js",
-  "repository": {
-    "type": "git",
-    "url": "http://github.com/square/cubism.git"
-  },
   "dependencies": {
-    "d3": "2.8.1"
+    "d3": "2.9.1"
   },
   "devDependencies": {
     "vows": "0.6.1",

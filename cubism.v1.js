@@ -1,5 +1,5 @@
 (function(exports){
-var cubism = exports.cubism = {version: "0.1.0"};
+var cubism = exports.cubism = {version: "1.0.0"};
 var cubism_id = 0;
 function cubism_identity(d) { return d; }
 cubism.option = function(name, value) {

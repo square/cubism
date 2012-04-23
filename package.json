@@ -1,14 +1,24 @@
 {
   "name": "cubism",
-  "version": "0.1.0",
-  "private": true,
-  "main": "./index.js",
+  "version": "1.0.0",
+  "description": "A JavaScript library for time series visualization.",
+  "keywords": [
+    "time series",
+    "visualization",
+    "d3"
+  ],
+  "homepage": "http://square.github.com/cubism/",
+  "author": {
+    "name": "Mike Bostock",
+    "url": "http://bost.ocks.org/mike"
+  },
   "repository": {
     "type": "git",
     "url": "http://github.com/square/cubism.git"
   },
+  "main": "./index.js",
   "dependencies": {
-    "d3": "2.8.1"
+    "d3": "2.9.1"
   },
   "devDependencies": {
     "vows": "0.6.1",

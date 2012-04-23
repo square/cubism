@@ -3,9 +3,9 @@ JS_COMPILER = ./node_modules/uglify-js/bin/uglifyjs
 
 .PHONY: test
 
-all: cubism.v0.min.js package.json
+all: cubism.v1.min.js package.json
 
-cubism.v0.js: \
+cubism.v1.js: \
 	src/cubism.js \
 	src/id.js \
 	src/identity.js \
@@ -33,13 +33,13 @@ cubism.v0.js: \
 	@echo '})(this);' >> $@
 	@chmod a-w $@
 
-package.json: cubism.v0.js src/package.js
+package.json: cubism.v1.js src/package.js
 	@rm -f $@
 	node src/package.js > $@
 	@chmod a-w $@
 
 clean:
-	rm -f cubism.v0.js cubism.v0.min.js package.json
+	rm -f cubism.v1.js cubism.v1.min.js package.json
 
 test: all
 	@$(JS_TESTER)
