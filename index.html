@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Cubism.js</title>
+<style>
+
+@import url(//fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+@import url(style.css);
+
+</style>
+<div id="body">
+<a href="https://github.com/square"><img src="square.png" id="logo"></a>
+
+<h1>Cubism.js</h1>
+
+<h2>Time Series Visualization</h2>
+
+<div id="example1"></div>
+
+<p><aside>Mouseover or use the arrow keys to inspect values.</aside>
+
+<p style="margin-top:3em;"><b>Cubism.js</b> is a <a href="http://mbostock.github.com/d3/">D3</a> plugin for visualizing time series. Use Cubism to construct better realtime dashboards, pulling data from <a href="http://graphite.wikidot.com/">Graphite</a>, <a href="../cube/">Cube</a> and other sources. Cubism is available under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License</a> on <a href="https://github.com/square/cubism">GitHub</a>.
+
+<h2>Scalable</h2>
+
+<p>Cubism fetches time series data incrementally: after the initial display, Cubism reduces server load by polling only the most recent values. Cubism renders incrementally, too, using <a href="http://www.w3.org/TR/2dcontext/">Canvas</a> to shift charts one pixel to the left. This approach lets Cubism scale easily to hundreds of metrics updating every ten seconds! Despite asynchronous fetching, rendering is synchronized so that charts update simultaneously, further improving performance and readability.
+
+<h2>Effective</h2>
+
+<p>Cubism also scales in terms of perception: small multiples aligned by time facilitate rapid comparison. Cubism’s horizon charts make better use of vertical space than standard area charts, allowing you to see many more metrics at-a-glance and increasing the likelihood of discovery. If you compress a 120-pixel tall area chart to 30 pixels, you lose 75% of the resolution and it becomes harder to see small changes:
+
+<div id="example2a"></div>
+
+<p>In contrast, <a href="http://vis.berkeley.edu/papers/horizon/">horizon charts</a> reduce vertical space <i>without</i> losing resolution. Larger values are overplotted in successively darker colors, while negative values are offset to descend from the top. As you increase the number of colors, you reduce the required vertical space:
+
+<div id="example2b"></div>
+
+<p>By combining position and color, horizon charts <a href="http://www.perceptualedge.com/articles/visual_business_intelligence/time_on_the_horizon.pdf">improve perception</a>: position is highly effective at discriminating small changes, while color differentiates large changes. To further increase data density, Cubism favors per-pixel metrics where each pixel encodes a distinct point in time. Cubism also includes thoughtful default colors by <a href="http://colorbrewer2.org/">Cynthia Brewer</a>.
+
+<h2>Flexible</h2>
+
+<p>Cubism is data-source agnostic. It has built-in support for <a href="https://github.com/square/cubism/wiki/Graphite">Graphite</a> and <a href="https://github.com/square/cubism/wiki/Cube">Cube</a>, and can be readily extended to fetch data from other sources. Client-side <a href="https://github.com/square/cubism/wiki/Metric">metric arithmetic</a> allows further flexibility by combining metrics from multiple sources. Cubism’s modular components are designed for extensibility. You can add new chart types and modes of interaction, too. Cubism builds on <a href="http://mbostock.github.com/d3/">D3</a>, making it highly customizable via CSS and JavaScript.
+
+<p>Want to learn more? <a href="https://github.com/square/cubism">See the source and documentation.</a>
+
+<footer>
+  <span style="float:right;">
+    Released under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License 2.0</a>.
+  </span>
+  Copyright 2012 <a href="http://squareup.com">Square, Inc.</a>
+</footer>
+</div>
+
+<a href="https://github.com/square/cubism"><img id="fork" src="github.png"></a>
+
+<script src="d3.v2.js"></script>
+<script src="cubism.v1.js"></script>
+<script src="highlight.min.js"></script>
+<script>
+
+function random(name) {
+  var value = 0,
+      values = [],
+      i = 0,
+      last;
+  return context.metric(function(start, stop, step, callback) {
+    start = +start, stop = +stop;
+    if (isNaN(last)) last = start;
+    while (last < stop) {
+      last += step;
+      value = Math.max(-10, Math.min(10, value + .8 * Math.random() - .4 + .2 * Math.cos(i += .2)));
+      values.push(value);
+    }
+    callback(null, values = values.slice((start - stop) / step));
+  }, name);
+}
+
+</script>
+<script>
+
+var context = cubism.context()
+    .serverDelay(0)
+    .clientDelay(0)
+    .step(1e3)
+    .size(960);
+
+var foo = random("foo"),
+    bar = random("bar");
+
+d3.select("#example1").call(function(div) {
+
+  div.append("div")
+      .attr("class", "axis")
+      .call(context.axis().orient("top"));
+
+  div.selectAll(".horizon")
+      .data([foo, bar, foo.add(bar), foo.subtract(bar)])
+    .enter().append("div")
+      .attr("class", "horizon")
+      .call(context.horizon().extent([-20, 20]));
+
+  div.append("div")
+      .attr("class", "rule")
+      .call(context.rule());
+
+});
+
+d3.select("#example2a").call(function(div) {
+  div.datum(foo);
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(120)
+        .mode("mirror")
+        .colors(["#bdd7e7","#bae4b3"])
+        .title("Area (120px)")
+        .extent([-10, 10]));
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(30)
+        .mode("mirror")
+        .colors(["#bdd7e7","#bae4b3"])
+        .title("Area (30px)")
+        .extent([-10, 10]));
+});
+
+d3.select("#example2b").call(function(div) {
+  div.datum(foo);
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(120)
+        .colors(["#bdd7e7","#bae4b3"])
+        .title("Horizon, 1-band (120px)")
+        .extent([-10, 10]));
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(60)
+        .colors(["#6baed6","#bdd7e7","#bae4b3","#74c476"])
+        .title("Horizon, 2-band (60px)")
+        .extent([-10, 10]));
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(40)
+        .colors(["#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354"])
+        .title("Horizon, 3-band (40px)")
+        .extent([-10, 10]));
+
+  div.append("div")
+      .attr("class", "horizon")
+      .call(context.horizon()
+        .height(30)
+        .colors(["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"])
+        .title("Horizon, 4-band (30px)")
+        .extent([-10, 10]));
+
+});
+
+// On mousemove, reposition the chart values to match the rule.
+context.on("focus", function(i) {
+  d3.selectAll(".value").style("right", i == null ? null : context.size() - i + "px");
+});
+
+</script>
