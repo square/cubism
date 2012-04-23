@@ -1,21 +1,12 @@
-# Cubism
+# Cubism.js
 
-Cubism is a JavaScript library for visualizing time series data, letting you
-construct beautiful real-time dashboards quickly and easily. Cubism fetches
-metrics from a variety of backends and constructs dynamic visualizations in the
-client using [D3](http://mbostock.github.com/d3/), SVG and Canvas. Cubism also
-lets you do simple arithmetic or post-processing of metrics, such as comparing
-two metrics or comparing a metric against itself, time-shifted.
+Cubism.js is a [D3](http://mbostock.github.com/d3/) plugin for visualizing time series. Use Cubism to construct better realtime dashboards, pulling data from [Graphite](/square/cubism/wiki/Graphite), [Cube](/square/cubism/wiki/Cube) and other sources. Cubism is available under the [Apache License](/square/cubism/blob/master/LICENSE).
 
-Cubism currently supports the following backends:
+## Resources
 
-  * [Graphite](http://graphite.wikidot.com/)
-  * [Cube](http://square.github.com/cube/)
-
-Cubism currently supports the following visualization types:
-
-  * [horizon charts](http://vis.berkeley.edu/papers/horizon/)
-  * comparison charts
+* [Introduction](http://square.github.com/cubism/)
+* [API Reference](/square/cubism/wiki/API-Reference)
+* [Support](http://stackoverflow.com/questions/tagged/cubism.js)
 
 ## Contributing
 
