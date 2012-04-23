@@ -9,7 +9,7 @@ cubism_contextPrototype.comparison = function() {
       title = cubism_identity,
       formatPrimary = cubism_comparisonPrimaryFormat,
       formatChange = cubism_comparisonChangeFormat,
-      colors = ["#9ecae1", "#3182bd", "#a1d99b", "#31a354"],
+      colors = ["#9ecae1", "#225b84", "#a1d99b", "#22723a"],
       strokeWidth = 1.5;
 
   function comparison(selection) {
@@ -55,15 +55,20 @@ cubism_contextPrototype.comparison = function() {
         var primaryExtent = primary_.extent(),
             secondaryExtent = secondary_.extent(),
             extent = extent_ == null ? primaryExtent : extent_;
-        scale.domain([0, extent[1]]).range([height, 0]);
+        scale.domain(extent).range([height, 0]);
         ready = primaryExtent.concat(secondaryExtent).every(isFinite);
+
+        // consistent overplotting
+        var round = start / context.step() & 1
+            ? cubism_comparisonRoundOdd
+            : cubism_comparisonRoundEven;
 
         // positive changes
         canvas.fillStyle = colors[2];
         for (var i = 0, n = width; i < n; ++i) {
           var y0 = scale(primary_.valueAt(i)),
               y1 = scale(secondary_.valueAt(i));
-          if (y0 < y1) canvas.fillRect(i & 0xfffffe, y0, 1, y1 - y0);
+          if (y0 < y1) canvas.fillRect(round(i), y0, 1, y1 - y0);
         }
 
         // negative changes
@@ -71,7 +76,7 @@ cubism_contextPrototype.comparison = function() {
         for (i = 0; i < n; ++i) {
           var y0 = scale(primary_.valueAt(i)),
               y1 = scale(secondary_.valueAt(i));
-          if (y0 > y1) canvas.fillRect(i & 0xfffffe, y1, 1, y0 - y1);
+          if (y0 > y1) canvas.fillRect(round(i), y1, 1, y0 - y1);
         }
 
         // positive values
@@ -79,7 +84,7 @@ cubism_contextPrototype.comparison = function() {
         for (i = 0; i < n; ++i) {
           var y0 = scale(primary_.valueAt(i)),
               y1 = scale(secondary_.valueAt(i));
-          if (y0 <= y1) canvas.fillRect(i & 0xfffffe, y0, 1, strokeWidth);
+          if (y0 <= y1) canvas.fillRect(round(i), y0, 1, strokeWidth);
         }
 
         // negative values
@@ -87,7 +92,7 @@ cubism_contextPrototype.comparison = function() {
         for (i = 0; i < n; ++i) {
           var y0 = scale(primary_.valueAt(i)),
               y1 = scale(secondary_.valueAt(i));
-          if (y0 > y1) canvas.fillRect(i & 0xfffffe, y0 - strokeWidth, 1, strokeWidth);
+          if (y0 > y1) canvas.fillRect(round(i), y0 - strokeWidth, 1, strokeWidth);
         }
 
         canvas.restore();
@@ -215,3 +220,11 @@ cubism_contextPrototype.comparison = function() {
 
 var cubism_comparisonPrimaryFormat = d3.format(".2s"),
     cubism_comparisonChangeFormat = d3.format("+.0%");
+
+function cubism_comparisonRoundEven(i) {
+  return i & 0xfffffe;
+}
+
+function cubism_comparisonRoundOdd(i) {
+  return ((i + 1) & 0xfffffe) - 1;
+}
