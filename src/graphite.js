@@ -3,7 +3,8 @@ cubism_contextPrototype.graphite = function(host) {
   var source = {},
       context = this;
 
-  source.metric = function(expression) {
+  source.metric = function(expression, name) {
+    if (!name) name = expression + "";
     return context.metric(function(start, stop, step, callback) {
       d3.text(host + "/render?format=raw"
           + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
@@ -12,7 +13,7 @@ cubism_contextPrototype.graphite = function(host) {
         if (!text) return callback(new Error("unable to load data"));
         callback(null, cubism_graphiteParse(text));
       });
-    }, expression += "");
+    }, name += "");
   };
 
   source.find = function(pattern, callback) {
