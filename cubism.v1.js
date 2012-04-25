@@ -243,6 +243,11 @@ cubism_metricPrototype.valueAt = function() {
   return NaN;
 };
 
+cubism_metricPrototype.alias = function(name) {
+  this.toString = function() { return name; };
+  return this;
+};
+
 cubism_metricPrototype.extent = function() {
   var i = 0,
       n = this.context.size(),
