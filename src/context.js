@@ -116,13 +116,15 @@ cubism.context = function() {
       case 37: // left
         if (focus == null) focus = size - 1;
         if (focus > 0) {
-          d3.event.shiftKey ? context.focus(focus -= 20) : context.focus(--focus);
+          if (d3.event.shiftKey && focus > 20) context.focus(focus -= 20)
+          context.focus(--focus);
         }
         break;
       case 39: // right
         if (focus == null) focus = size - 2;
         if (focus < size - 1) {
-          d3.event.shiftKey ? context.focus(focus += 20) : context.focus(++focus);
+          if (d3.event.shiftKey && size - focus > 20) context.focus(focus += 20)
+          context.focus(++focus);
         }
         break;
       default: return;
