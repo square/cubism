@@ -22,6 +22,7 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
+      shiftDiff = 20, // distance to move focus if shift is held
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       timeout,
@@ -132,15 +133,15 @@ cubism.context = function() {
       case 37: // left
         if (focus == null) focus = size - 1;
         if (focus > 0) {
-          if (d3.event.shiftKey && focus > 20) context.focus(focus -= 20)
-          context.focus(--focus);
+          if (d3.event.shiftKey && focus > shiftDiff) context.focus(focus -= shiftDiff)
+          else context.focus(--focus);
         }
         break;
       case 39: // right
         if (focus == null) focus = size - 2;
         if (focus < size - 1) {
-          if (d3.event.shiftKey && size - focus > 20) context.focus(focus += 20)
-          context.focus(++focus);
+          if (d3.event.shiftKey && size - focus > shiftDiff) context.focus(focus += shiftDiff)
+          else context.focus(++focus);
         }
         break;
       default: return;
