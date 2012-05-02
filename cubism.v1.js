@@ -18,7 +18,7 @@ cubism.options = function(name, defaultValues) {
       values.push(decodeURIComponent(o[1]));
     }
   }
-  return !values.length && arguments.length > 1 ? defaultValues : values;
+  return values.length || arguments.length < 2 ? values : defaultValues;
 };
 cubism.context = function() {
   var context = new cubism_context,
