@@ -884,8 +884,11 @@ function cubism_comparisonRoundOdd(i) {
 cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
-      axis_ = d3.svg.axis().scale(scale),
-      format = context.step() < 6e4 ? cubism_axisFormatSeconds : cubism_axisFormatMinutes;
+      axis_ = d3.svg.axis().scale(scale);
+
+  var format = context.step() < 6e4 ? cubism_axisFormatSeconds
+      : context.step() < 864e5 ? cubism_axisFormatMinutes
+      : cubism_axisFormatDays;
 
   function axis(selection) {
     var id = ++cubism_id,
@@ -942,7 +945,8 @@ cubism_contextPrototype.axis = function() {
 };
 
 var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
-    cubism_axisFormatMinutes = d3.time.format("%I:%M %p");
+    cubism_axisFormatMinutes = d3.time.format("%I:%M %p"),
+    cubism_axisFormatDays = d3.time.format("%B %d");
 cubism_contextPrototype.rule = function() {
   var context = this;
 
