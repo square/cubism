@@ -901,7 +901,9 @@ cubism_contextPrototype.axis = function() {
 
     context.on("change.axis-" + id, function() {
       g.call(axis_);
-      if (!tick) tick = cloneTick();
+      if (!tick) tick = d3.select(g.node().appendChild(g.selectAll("text").node().cloneNode(true)))
+          .style("display", "none")
+          .text(null);
     });
 
     context.on("focus.axis-" + id, function(i) {
@@ -916,12 +918,6 @@ cubism_contextPrototype.axis = function() {
         }
       }
     });
-
-    function cloneTick() {
-      return g.select(function() { return this.appendChild(g.select("text").node().cloneNode(true)); })
-          .style("display", "none")
-          .text(null);
-    }
   }
 
   axis.remove = function(selection) {
