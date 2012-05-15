@@ -1,8 +1,11 @@
 cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
-      axis_ = d3.svg.axis().scale(scale),
-      format = context.step() < 6e4 ? cubism_axisFormatSeconds : cubism_axisFormatMinutes;
+      axis_ = d3.svg.axis().scale(scale);
+
+  var format = context.step() < 6e4 ? cubism_axisFormatSeconds
+      : context.step() < 864e5 ? cubism_axisFormatMinutes
+      : cubism_axisFormatDays;
 
   function axis(selection) {
     var id = ++cubism_id,
@@ -18,7 +21,9 @@ cubism_contextPrototype.axis = function() {
 
     context.on("change.axis-" + id, function() {
       g.call(axis_);
-      if (!tick) tick = cloneTick();
+      if (!tick) tick = d3.select(g.node().appendChild(g.selectAll("text").node().cloneNode(true)))
+          .style("display", "none")
+          .text(null);
     });
 
     context.on("focus.axis-" + id, function(i) {
@@ -33,12 +38,6 @@ cubism_contextPrototype.axis = function() {
         }
       }
     });
-
-    function cloneTick() {
-      return g.select(function() { return this.appendChild(g.select("text").node().cloneNode(true)); })
-          .style("display", "none")
-          .text(null);
-    }
   }
 
   axis.remove = function(selection) {
@@ -63,4 +62,5 @@ cubism_contextPrototype.axis = function() {
 };
 
 var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
-    cubism_axisFormatMinutes = d3.time.format("%I:%M %p");
+    cubism_axisFormatMinutes = d3.time.format("%I:%M %p"),
+    cubism_axisFormatDays = d3.time.format("%B %d");

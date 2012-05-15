@@ -1,5 +1,5 @@
 (function(exports){
-var cubism = exports.cubism = {version: "1.0.1"};
+var cubism = exports.cubism = {version: "1.1.0"};
 var cubism_id = 0;
 function cubism_identity(d) { return d; }
 cubism.option = function(name, defaultValue) {
@@ -191,7 +191,7 @@ cubism_contextPrototype.graphite = function(host) {
       context = this;
 
   source.metric = function(expression) {
-    return context.metric(function(start, stop, step, callback) {
+    var metric = context.metric(function(start, stop, step, callback) {
       d3.text(host + "/render?format=raw"
           + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
           + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
@@ -200,6 +200,8 @@ cubism_contextPrototype.graphite = function(host) {
         callback(null, cubism_graphiteParse(text));
       });
     }, expression += "");
+    metric.summarize = summarize;
+    return metric;
   };
 
   source.find = function(pattern, callback) {
@@ -214,6 +216,13 @@ cubism_contextPrototype.graphite = function(host) {
   source.toString = function() {
     return host;
   };
+
+  function summarize(method) {
+    var step = Math.round(context.step() / 1e3);
+    if (step === 10) return this;
+    step = !(step % 3600) ? step / 3600 + "hour" : !(step % 60) ? step / 60 + "min" : step + "sec";
+    return source.metric("summarize(" + this + ",'" + step + "','" + method + "')");
+  }
 
   return source;
 };
@@ -884,8 +893,11 @@ function cubism_comparisonRoundOdd(i) {
 cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
-      axis_ = d3.svg.axis().scale(scale),
-      format = context.step() < 6e4 ? cubism_axisFormatSeconds : cubism_axisFormatMinutes;
+      axis_ = d3.svg.axis().scale(scale);
+
+  var format = context.step() < 6e4 ? cubism_axisFormatSeconds
+      : context.step() < 864e5 ? cubism_axisFormatMinutes
+      : cubism_axisFormatDays;
 
   function axis(selection) {
     var id = ++cubism_id,
@@ -901,7 +913,9 @@ cubism_contextPrototype.axis = function() {
 
     context.on("change.axis-" + id, function() {
       g.call(axis_);
-      if (!tick) tick = cloneTick();
+      if (!tick) tick = d3.select(g.node().appendChild(g.selectAll("text").node().cloneNode(true)))
+          .style("display", "none")
+          .text(null);
     });
 
     context.on("focus.axis-" + id, function(i) {
@@ -916,12 +930,6 @@ cubism_contextPrototype.axis = function() {
         }
       }
     });
-
-    function cloneTick() {
-      return g.select(function() { return this.appendChild(g.select("text").node().cloneNode(true)); })
-          .style("display", "none")
-          .text(null);
-    }
   }
 
   axis.remove = function(selection) {
@@ -946,7 +954,8 @@ cubism_contextPrototype.axis = function() {
 };
 
 var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
-    cubism_axisFormatMinutes = d3.time.format("%I:%M %p");
+    cubism_axisFormatMinutes = d3.time.format("%I:%M %p"),
+    cubism_axisFormatDays = d3.time.format("%B %d");
 cubism_contextPrototype.rule = function() {
   var context = this;
 
