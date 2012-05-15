@@ -191,7 +191,7 @@ cubism_contextPrototype.graphite = function(host) {
       context = this;
 
   source.metric = function(expression) {
-    return context.metric(function(start, stop, step, callback) {
+    var metric = context.metric(function(start, stop, step, callback) {
       d3.text(host + "/render?format=raw"
           + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
           + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
@@ -200,6 +200,8 @@ cubism_contextPrototype.graphite = function(host) {
         callback(null, cubism_graphiteParse(text));
       });
     }, expression += "");
+    metric.summarize = summarize;
+    return metric;
   };
 
   source.find = function(pattern, callback) {
@@ -214,6 +216,13 @@ cubism_contextPrototype.graphite = function(host) {
   source.toString = function() {
     return host;
   };
+
+  function summarize(method) {
+    var step = Math.round(context.step() / 1e3);
+    if (step === 10) return this;
+    step = !(step % 3600) ? step / 3600 + "hour" : !(step % 60) ? step / 60 + "min" : step + "sec";
+    return source.metric("summarize(" + this + ",'" + step + "','" + method + "')");
+  }
 
   return source;
 };
