@@ -191,16 +191,30 @@ cubism_contextPrototype.graphite = function(host) {
       context = this;
 
   source.metric = function(expression) {
+    var sum = "sum";
+
     var metric = context.metric(function(start, stop, step, callback) {
+      var target = expression;
+
+      // Apply the summarize, if necessary.
+      if (step !== 1e4) target = "summarize(" + target + ",'"
+          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step + "sec")
+          + "','" + sum + "')";
+
       d3.text(host + "/render?format=raw"
-          + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
+          + "&target=" + encodeURIComponent("alias(" + target + ",'')")
           + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
           + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
         if (!text) return callback(new Error("unable to load data"));
         callback(null, cubism_graphiteParse(text));
       });
     }, expression += "");
-    metric.summarize = summarize;
+
+    metric.summarize = function(_) {
+      sum = _;
+      return metric;
+    };
+
     return metric;
   };
 
@@ -216,13 +230,6 @@ cubism_contextPrototype.graphite = function(host) {
   source.toString = function() {
     return host;
   };
-
-  function summarize(method) {
-    var step = Math.round(context.step() / 1e3);
-    if (step === 10) return this;
-    step = !(step % 3600) ? step / 3600 + "hour" : !(step % 60) ? step / 60 + "min" : step + "sec";
-    return source.metric("summarize(" + this + ",'" + step + "','" + method + "')");
-  }
 
   return source;
 };
@@ -957,7 +964,8 @@ var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
     cubism_axisFormatMinutes = d3.time.format("%I:%M %p"),
     cubism_axisFormatDays = d3.time.format("%B %d");
 cubism_contextPrototype.rule = function() {
-  var context = this;
+  var context = this,
+      metric = cubism_identity;
 
   function rule(selection) {
     var id = ++cubism_id;
@@ -965,17 +973,38 @@ cubism_contextPrototype.rule = function() {
     var line = selection.append("div")
         .datum({id: id})
         .attr("class", "line")
-        .style("position", "fixed")
-        .style("top", 0)
-        .style("right", 0)
-        .style("bottom", 0)
-        .style("width", "1px")
-        .style("pointer-events", "none");
+        .call(cubism_ruleStyle);
+
+    selection.each(function(d, i) {
+      var that = this,
+          id = ++cubism_id,
+          metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric;
+
+      if (!metric_) return;
+
+      function change(start, stop) {
+        var values = [];
+
+        for (var i = 0, n = context.size(); i < n; ++i) {
+          if (metric_.valueAt(i)) {
+            values.push(i);
+          }
+        }
+
+        var lines = selection.selectAll(".metric").data(values);
+        lines.exit().remove();
+        lines.enter().append("div").attr("class", "metric line").call(cubism_ruleStyle);
+        lines.style("left", cubism_ruleLeft);
+      }
+
+      context.on("change.rule-" + id, change);
+      metric_.on("change.rule-" + id, change);
+    });
 
     context.on("focus.rule-" + id, function(i) {
-      line
+      line.datum(i)
           .style("display", i == null ? "none" : null)
-          .style("left", function() { return this.parentNode.getBoundingClientRect().left + i + "px"; });
+          .style("left", cubism_ruleLeft);
     });
   }
 
@@ -990,6 +1019,25 @@ cubism_contextPrototype.rule = function() {
     }
   };
 
+  rule.metric = function(_) {
+    if (!arguments.length) return metric;
+    metric = _;
+    return rule;
+  };
+
   return rule;
 };
+
+function cubism_ruleStyle(line) {
+  line
+      .style("position", "absolute")
+      .style("top", 0)
+      .style("bottom", 0)
+      .style("width", "1px")
+      .style("pointer-events", "none");
+}
+
+function cubism_ruleLeft(i) {
+  return i + "px";
+}
 })(this);
