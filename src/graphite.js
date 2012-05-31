@@ -4,16 +4,30 @@ cubism_contextPrototype.graphite = function(host) {
       context = this;
 
   source.metric = function(expression) {
+    var sum = "sum";
+
     var metric = context.metric(function(start, stop, step, callback) {
+      var target = expression;
+
+      // Apply the summarize, if necessary.
+      if (step !== 1e4) target = "summarize(" + target + ",'"
+          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step + "sec")
+          + "','" + sum + "')";
+
       d3.text(host + "/render?format=raw"
-          + "&target=" + encodeURIComponent("alias(" + expression + ",'')")
+          + "&target=" + encodeURIComponent("alias(" + target + ",'')")
           + "&from=" + cubism_graphiteFormatDate(start - 2 * step) // off-by-two?
           + "&until=" + cubism_graphiteFormatDate(stop - 1000), function(text) {
         if (!text) return callback(new Error("unable to load data"));
         callback(null, cubism_graphiteParse(text));
       });
     }, expression += "");
-    metric.summarize = summarize;
+
+    metric.summarize = function(_) {
+      sum = _;
+      return metric;
+    };
+
     return metric;
   };
 
@@ -29,13 +43,6 @@ cubism_contextPrototype.graphite = function(host) {
   source.toString = function() {
     return host;
   };
-
-  function summarize(method) {
-    var step = Math.round(context.step() / 1e3);
-    if (step === 10) return this;
-    step = !(step % 3600) ? step / 3600 + "hour" : !(step % 60) ? step / 60 + "min" : step + "sec";
-    return source.metric("summarize(" + this + ",'" + step + "','" + method + "')");
-  }
 
   return source;
 };
