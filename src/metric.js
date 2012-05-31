@@ -5,6 +5,8 @@ function cubism_metric(context) {
 
 var cubism_metricPrototype = cubism_metric.prototype;
 
+cubism.metric = cubism_metric;
+
 cubism_metricPrototype.valueAt = function() {
   return NaN;
 };

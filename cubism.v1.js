@@ -153,7 +153,7 @@ cubism.context = function() {
 
 function cubism_context() {}
 
-var cubism_contextPrototype = cubism_context.prototype;
+var cubism_contextPrototype = cubism.context.prototype = cubism_context.prototype;
 
 cubism_contextPrototype.constant = function(value) {
   return new cubism_metricConstant(this, +value);
@@ -260,6 +260,8 @@ function cubism_metric(context) {
 }
 
 var cubism_metricPrototype = cubism_metric.prototype;
+
+cubism.metric = cubism_metric;
 
 cubism_metricPrototype.valueAt = function() {
   return NaN;
