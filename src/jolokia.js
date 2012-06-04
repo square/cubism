@@ -37,8 +37,11 @@ cubism_contextPrototype.jolokia = function(url,opts) {
             var absMetric = context.metric(mapValuesFunc(values,options.keepDelay || options.delta), name);
             var prevMetric = absMetric.shift(-options.delta);
             metric = absMetric.subtract(prevMetric);
+            if (name) {
+                metric.toString = function() { return name };
+            }
         } else {
-            metric =  context.metric(mapValuesFunc(values,options.keepDelay), name);
+            metric =  context.metric(mapValuesFunc(values,options.keepDelay,context.width), name);
         }
 
         // If an extraction function is given, this can be used for fine grained manipulations of
@@ -119,7 +122,7 @@ cubism_contextPrototype.jolokia = function(url,opts) {
 
     // Generate function which picks the requested values from the values
     // stored periodically by the Jolokia poller.
-    function mapValuesFunc(values,keepDelay) {
+    function mapValuesFunc(values,keepDelay,width) {
         return function(cStart, cStop, cStep, callback) {
             cStart = +cStart;
             cStop = +cStop;
@@ -160,12 +163,12 @@ cubism_contextPrototype.jolokia = function(url,opts) {
             }
 
             // Remove older values
-            if (vIdx < vLen - 1) {
+            if (vLen > width) {
                 if (!keepDelay) {
-                    values.length = vIdx+1;
+                    values.length = width;
                 } else {
-                    var keepUntil = values[vIdx].time - keepDelay,
-                        i = vIdx;
+                    var keepUntil = values[width].time - keepDelay,
+                        i = width;
                     while (i < vLen && values[i].time > keepUntil) {
                         i++;
                     }
