@@ -124,7 +124,7 @@ cubism_contextPrototype.horizon = function() {
 
       function focus(i) {
         if (i == null) i = width - 1;
-        var value = metric_.valueAt(i);
+        var value = metric_.valueAt(Math.round(i));
         span.datum(value).text(isNaN(value) ? null : format);
       }
 
