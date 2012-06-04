@@ -15,9 +15,10 @@ cubism_contextPrototype.rule = function() {
         .style("pointer-events", "none");
 
     context.on("focus.rule-" + id, function(i) {
-      line
-          .style("display", i == null ? "none" : null)
-          .style("left", function() { return this.parentNode.getBoundingClientRect().left + i + "px"; });
+        line.style("display", i == null ? "none" : null);
+        if (i != null) {
+            line.style("left", function() { return this.parentNode.getBoundingClientRect().left + i + "px"; });
+        }
     });
   }
 
