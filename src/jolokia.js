@@ -17,31 +17,32 @@ cubism_contextPrototype.jolokia = function(url,opts) {
         // Create metric upfront so that it can be used in extraction functions. The name defaults to the mbean name
         // but can be given as first arguments
 
-        if (typeof arguments[arguments.length - 1] == "string") {
-            name = arguments[arguments.length - 1];
-            argsLen = arguments.length - 1;
+        var lastIdx = arguments.length - 1;
+        var lastArg = arguments[lastIdx];
+        if (typeof lastArg == "string") {
+            name = lastArg;
+            argsLen = lastIdx;
         }
-        // Options can be given as an object
-        if (typeof arguments[arguments.length - 1] == "object" && !arguments[arguments.length - 1].type) {
-            options = arguments[arguments.length - 1];
+        // Options can be given as an object (but not a request with a 'type' property)
+        if (typeof lastArg == "object" && !lastArg.type) {
+            options = lastArg;
             name = options.name;
-            argsLen = arguments.length - 1;
+            argsLen = lastIdx;
         }
         if (!name && typeof arguments[0] != "function") {
             name = arguments[0].mbean;
         }
-        var metric;
+
+        // Metric which maps our previously loally stored values to the ones requested by cubism
+        var metric = context.metric(mapValuesFunc(values,options.keepDelay,context.width), name);
         if (options.delta) {
             // Use cubism metric chaining for calculating the difference value and keep care that the
             // metric keeps old values up to the delta value
-            var absMetric = context.metric(mapValuesFunc(values,options.keepDelay || options.delta), name);
-            var prevMetric = absMetric.shift(-options.delta);
-            metric = absMetric.subtract(prevMetric);
+            var prevMetric = metric.shift(-options.delta);
+            metric = metric.subtract(prevMetric);
             if (name) {
                 metric.toString = function() { return name };
             }
-        } else {
-            metric =  context.metric(mapValuesFunc(values,options.keepDelay,context.width), name);
         }
 
         // If an extraction function is given, this can be used for fine grained manipulations of
