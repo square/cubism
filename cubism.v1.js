@@ -477,11 +477,14 @@ cubism_contextPrototype.horizon = function() {
         .attr("width", width)
         .attr("height", height);
 
-    selection.append("span")
+    label = selection.append("p")
+      .attr("class", "label")
+
+    label.append("span")
         .attr("class", "title")
         .text(title);
 
-    selection.append("span")
+    label.append("span")
         .attr("class", "value");
 
     selection.each(function(d, i) {
