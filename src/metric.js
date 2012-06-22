@@ -81,7 +81,7 @@ cubism_contextPrototype.metric = function(request, name) {
 
   //
   metric.valueAt = function(i) {
-    return values[i];
+    return values[Math.round(i)];
   };
 
   //
