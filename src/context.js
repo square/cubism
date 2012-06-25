@@ -6,7 +6,7 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
-      event = d3.dispatch("prepare", "beforechange", "change", "focus"),
+      event = d3.dispatch("prepare", "beforechange", "change", "focus", "start", "stop"),
       scale = context.scale = d3.time.scale().range([0, size]),
       timeout,
       focus;
@@ -42,11 +42,13 @@ cubism.context = function() {
 
       timeout = setTimeout(prepare, step);
     }, delay);
+    event.start.call(context);
     return context;
   };
 
   context.stop = function() {
     timeout = clearTimeout(timeout);
+    event.stop.call(context);
     return context;
   };
 
