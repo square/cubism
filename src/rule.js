@@ -39,7 +39,7 @@ cubism_contextPrototype.rule = function() {
     context.on("focus.rule-" + id, function(i) {
       line.datum(i)
           .style("display", i == null ? "none" : null)
-          .style("left", cubism_ruleLeft);
+          .style("left", i == null ? null : cubism_ruleLeft);
     });
   }
 

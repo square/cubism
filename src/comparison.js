@@ -15,7 +15,7 @@ cubism_contextPrototype.comparison = function() {
   function comparison(selection) {
 
     selection
-        .on("mousemove.comparison", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mousemove.comparison", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.comparison", function() { context.focus(null); });
 
     selection.append("canvas")
