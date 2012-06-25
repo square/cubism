@@ -133,6 +133,11 @@ function cubism_context() {}
 
 var cubism_contextPrototype = cubism_context.prototype;
 
+cubism.registerPlugin = function(name,plugin) {
+    cubism_contextPrototype[name] = plugin;
+};
+
 cubism_contextPrototype.constant = function(value) {
   return new cubism_metricConstant(this, +value);
 };
+
