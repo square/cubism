@@ -198,7 +198,7 @@ cubism_contextPrototype.graphite = function(host) {
 
       // Apply the summarize, if necessary.
       if (step !== 1e4) target = "summarize(" + target + ",'"
-          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step / 1e3 + "sec")
+          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step + "sec")
           + "','" + sum + "')";
 
       d3.text(host + "/render?format=raw"
