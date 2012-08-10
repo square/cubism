@@ -226,6 +226,14 @@ cubism_contextPrototype.graphite = function(host) {
     });
   };
 
+  source.findLeaves = function(pattern, callback) {
+    d3.json(host + "/metrics/find"
+         + "?query=" + encodeURIComponent(pattern), function(result) {
+       if (!result) return callback(new Error("unable to find metrics"));
+       callback(null, result.map(function(d) { return d.id; }));
+     });
+  };
+  
   // Returns the graphite host.
   source.toString = function() {
     return host;
