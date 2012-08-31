@@ -953,6 +953,11 @@ cubism_contextPrototype.axis = function() {
     }
   };
 
+  axis.focusFormat = function(to) {
+    format = to;
+    return axis;
+  };
+
   return d3.rebind(axis, axis_,
       "orient",
       "ticks",
