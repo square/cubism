@@ -1004,9 +1004,9 @@ cubism_contextPrototype.rule = function() {
     });
 
     context.on("focus.rule-" + id, function(i) {
-      line.datum(i)
-          .style("display", i == null ? "none" : null)
-          .style("left", i == null ? null : cubism_ruleLeft);
+      line.style("display", i == null ? "none" : null)
+          .style("left", i == null ? null : cubism_ruleLeft)
+          .datum().i = i;
     });
   }
 
@@ -1039,7 +1039,7 @@ function cubism_ruleStyle(line) {
       .style("pointer-events", "none");
 }
 
-function cubism_ruleLeft(i) {
-  return i + "px";
+function cubism_ruleLeft(d) {
+  return d.i + "px";
 }
 })(this);
