@@ -1004,9 +1004,9 @@ cubism_contextPrototype.rule = function() {
     });
 
     context.on("focus.rule-" + id, function(i) {
+      line.datum().i = i;
       line.style("display", i == null ? "none" : null)
-          .style("left", i == null ? null : cubism_ruleLeft)
-          .datum().i = i;
+          .style("left", i == null ? null : cubism_ruleLeft);
     });
   }
 
