@@ -4,7 +4,8 @@ cubism_contextPrototype.graphite = function(host) {
       context = this;
 
   source.metric = function(expression) {
-    var sum = "sum";
+    var sum = "sum",
+        keepLastValue = false;
 
     var metric = context.metric(function(start, stop, step, callback) {
       var target = expression;
@@ -13,6 +14,8 @@ cubism_contextPrototype.graphite = function(host) {
       if (step !== 1e4) target = "summarize(" + target + ",'"
           + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step / 1e3 + "sec")
           + "','" + sum + "')";
+
+      if (keepLastValue) target = "keepLastValue(" + target + ")";
 
       d3.text(host + "/render?format=raw"
           + "&target=" + encodeURIComponent("alias(" + target + ",'')")
@@ -25,6 +28,11 @@ cubism_contextPrototype.graphite = function(host) {
 
     metric.summarize = function(_) {
       sum = _;
+      return metric;
+    };
+
+    metric.keepLastValue = function () {
+      keepLastValue = true;
       return metric;
     };
 
