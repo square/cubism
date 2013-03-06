@@ -2,6 +2,7 @@ cubism.context = function() {
   var context = new cubism_context,
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
+      shift = 0, // no shift by default
       start0, stop0, // the start and stop for the previous change event
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
@@ -13,9 +14,9 @@ cubism.context = function() {
 
   function update() {
     var now = Date.now();
-    stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
+    stop0 = new Date(Math.floor((now - serverDelay - clientDelay + shift) / step) * step);
     start0 = new Date(stop0 - size * step);
-    stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
+    stop1 = new Date(Math.floor((now - serverDelay + shift) / step) * step);
     start1 = new Date(stop1 - size * step);
     scale.domain([start0, stop0]);
     return context;
@@ -23,13 +24,13 @@ cubism.context = function() {
 
   context.start = function() {
     if (timeout) clearTimeout(timeout);
-    var delay = +stop1 + serverDelay - Date.now();
+    var delay = +stop1 + serverDelay - Date.now() - shift;
 
     // If we're too late for the first prepare event, skip it.
     if (delay < clientDelay) delay += step;
 
     timeout = setTimeout(function prepare() {
-      stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
+      stop1 = new Date(Math.floor((Date.now() - serverDelay + shift) / step) * step);
       start1 = new Date(stop1 - size * step);
       event.prepare.call(context, start1, stop1);
 
@@ -65,6 +66,14 @@ cubism.context = function() {
   context.size = function(_) {
     if (!arguments.length) return size;
     scale.range([0, size = +_]);
+    return update();
+  };
+
+  // Set or get the metric shift (the count of metric values).
+  // Defaults to 0.
+  context.shift = function(_) {
+    if (!arguments.length) return shift;
+    shift = +_;
     return update();
   };
 
