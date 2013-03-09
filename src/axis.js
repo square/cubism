@@ -3,9 +3,10 @@ cubism_contextPrototype.axis = function() {
       scale = context.scale,
       axis_ = d3.svg.axis().scale(scale);
 
-  var format = context.step() < 6e4 ? cubism_axisFormatSeconds
+  var formatDefault = context.step() < 6e4 ? cubism_axisFormatSeconds
       : context.step() < 864e5 ? cubism_axisFormatMinutes
       : cubism_axisFormatDays;
+  var format = formatDefault;
 
   function axis(selection) {
     var id = ++cubism_id,
@@ -50,6 +51,12 @@ cubism_contextPrototype.axis = function() {
       context.on("change.axis-" + d.id, null);
       context.on("focus.axis-" + d.id, null);
     }
+  };
+
+  axis.focusFormat = function(_) {
+    if (!arguments.length) return format == formatDefault ? null : _;
+    format = _ == null ? formatDefault : _;
+    return axis;
   };
 
   return d3.rebind(axis, axis_,
