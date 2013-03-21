@@ -1,6 +1,6 @@
 {
   "name": "cubism",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "A JavaScript library for time series visualization.",
   "keywords": [
     "time series",
