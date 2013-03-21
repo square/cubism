@@ -91,6 +91,7 @@ cubism_contextPrototype.horizon = function() {
           for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
+            if (y1 === undefined) continue;
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
           }
         }
