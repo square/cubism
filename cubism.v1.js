@@ -1,6 +1,13 @@
 (function(exports){
 var cubism = exports.cubism = {version: "1.2.2"};
 var cubism_id = 0;
+if (typeof Object.create === 'undefined') {
+  Object.create = function (o) {
+    function F() {};
+    F.prototype = o;
+    return new F();
+  };
+}
 function cubism_identity(d) { return d; }
 cubism.option = function(name, defaultValue) {
   var values = cubism.options(name);
@@ -547,6 +554,7 @@ cubism_contextPrototype.horizon = function() {
           for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
+            if (typeof y1 =="undefined") { continue; }
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
           }
         }
