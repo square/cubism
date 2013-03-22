@@ -1,5 +1,5 @@
 (function(exports){
-var cubism = exports.cubism = {version: "1.2.0"};
+var cubism = exports.cubism = {version: "1.2.3"};
 var cubism_id = 0;
 function cubism_identity(d) { return d; }
 cubism.option = function(name, defaultValue) {
@@ -198,7 +198,7 @@ cubism_contextPrototype.graphite = function(host) {
 
       // Apply the summarize, if necessary.
       if (step !== 1e4) target = "summarize(" + target + ",'"
-          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step + "sec")
+          + (!(step % 36e5) ? step / 36e5 + "hour" : !(step % 6e4) ? step / 6e4 + "min" : step / 1e3 + "sec")
           + "','" + sum + "')";
 
       d3.text(host + "/render?format=raw"
@@ -470,7 +470,7 @@ cubism_contextPrototype.horizon = function() {
   function horizon(selection) {
 
     selection
-        .on("mousemove.horizon", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mousemove.horizon", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.horizon", function() { context.focus(null); });
 
     selection.append("canvas")
@@ -547,6 +547,7 @@ cubism_contextPrototype.horizon = function() {
           for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
+            if (y1 === undefined) continue;
             canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
           }
         }
@@ -686,7 +687,7 @@ cubism_contextPrototype.comparison = function() {
   function comparison(selection) {
 
     selection
-        .on("mousemove.comparison", function() { context.focus(d3.mouse(this)[0]); })
+        .on("mousemove.comparison", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.comparison", function() { context.focus(null); });
 
     selection.append("canvas")
@@ -1006,7 +1007,7 @@ cubism_contextPrototype.rule = function() {
     context.on("focus.rule-" + id, function(i) {
       line.datum(i)
           .style("display", i == null ? "none" : null)
-          .style("left", cubism_ruleLeft);
+          .style("left", i == null ? null : cubism_ruleLeft);
     });
   }
 
