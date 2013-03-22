@@ -13,6 +13,7 @@ cubism.v1.js: \
 	src/context.js \
 	src/cube.js \
 	src/graphite.js \
+	src/gangliaWeb.js \
 	src/metric.js \
 	src/metric-constant.js \
 	src/metric-operator.js \
