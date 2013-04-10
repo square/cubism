@@ -2,6 +2,8 @@ cubism_contextPrototype.linechart = function() {
   var context = this,
       width = context.size(),
       height = 30,
+      axispadding = 40,
+      ymax = 100,
       line = d3.svg.line().interpolate("basis"),
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -59,14 +61,31 @@ cubism_contextPrototype.linechart = function() {
           }
         }
 
+        ymax = Math.ceil(d3.max(data) / 100) * 100;
         var x = d3.scale.linear().domain([0, data.length]).range([0, width]);
-        var y = scale.domain([d3.max(data), 0]).range([0, height]);
+        var y = scale.domain([ymax, 0]).range([0, height]);
 
         line.x(function(d, i) { return x(i); })
             .y(function(d) { return y(d); });
 
+
         svg.selectAll("path").remove()
+        svg.selectAll("g").remove()
+
+        svg.append("g")
+          .attr("class", "left axis")
+          .attr("transform", "translate(" + axispadding + ", 0)")
+          .call(d3.svg.axis()
+                .scale(y)
+                .tickValues([0.4 * ymax, 0.8 * ymax])
+                .orient("left")
+                .tickFormat(function(d) {
+                    if (d > 0) { return  d; }
+                })
+               );
+
         svg.append("path").attr("d", line(data))
+          .attr("transform", "translate(" + axispadding + ", 0)")
           .attr("stroke", colors_[m])
           .attr("stroke-width", 1)
           .attr("fill", "none");
