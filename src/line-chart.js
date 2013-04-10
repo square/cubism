@@ -2,7 +2,6 @@ cubism_contextPrototype.linechart = function() {
   var context = this,
       width = context.size(),
       height = 30,
-      axispadding = 40,
       ymax = 100,
       line = d3.svg.line().interpolate("basis"),
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
@@ -74,7 +73,7 @@ cubism_contextPrototype.linechart = function() {
 
         svg.append("g")
           .attr("class", "left axis")
-          .attr("transform", "translate(" + axispadding + ", 0)")
+          .attr("transform", "translate(40, 0)")
           .call(d3.svg.axis()
                 .scale(y)
                 .tickValues([0.4 * ymax, 0.8 * ymax])
@@ -85,7 +84,6 @@ cubism_contextPrototype.linechart = function() {
                );
 
         svg.append("path").attr("d", line(data))
-          .attr("transform", "translate(" + axispadding + ", 0)")
           .attr("stroke", colors_[m])
           .attr("stroke-width", 1)
           .attr("fill", "none");
