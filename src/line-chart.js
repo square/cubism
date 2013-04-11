@@ -2,7 +2,7 @@ cubism_contextPrototype.linechart = function() {
   var context = this,
       width = context.size(),
       height = 30,
-      line = d3.svg.line().interpolate("basis"),
+      summarize = function(d) { if (d.length > 0) { return d[0]; } else { return 0; } }
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
       title = cubism_identity,
@@ -35,6 +35,7 @@ cubism_contextPrototype.linechart = function() {
           id = ++cubism_id,
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
+          line = d3.svg.line().interpolate("basis"),
           svg = d3.select(that).select("svg"),
           span = d3.select(that).select(".value"),
           ymax = 100,
@@ -42,11 +43,17 @@ cubism_contextPrototype.linechart = function() {
 
       function change() {
         var data = [],
-            value = 0;
+            i = 0;
 
-        for (var i = 0; i < width; i += step) {
-          value = metric_.valueAt(i);
-          if (value) {
+        while (i < width) {
+          var window = [],
+              value = 0;
+
+          for (var j = 0; j < step && i < width; ++j, ++i)
+            window.push(metric_.valueAt(i));
+
+          value = summarize(window);
+          if (isFinite(value)) {
             data.push(value);
           } else {
             data.push(0);
@@ -82,7 +89,7 @@ cubism_contextPrototype.linechart = function() {
 
         svg.append("path").attr("d", line(data))
           .attr("stroke", colors_[m])
-          .attr("stroke-width", stroke_width)
+          .attr("stroke-width", step < stroke_width ? step : stroke_width)
           .attr("fill", "none");
       }
 
@@ -126,6 +133,12 @@ cubism_contextPrototype.linechart = function() {
   linechart.height = function(_) {
     if (!arguments.length) return height;
     height = +_;
+    return linechart;
+  };
+
+  linechart.summarize = function(_) {
+    if (!arguments.length) return summarize;
+    summarize = _;
     return linechart;
   };
 
