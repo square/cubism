@@ -45,11 +45,11 @@ cubism_contextPrototype.linechart = function() {
         var data = [],
             i = 0;
 
-        while (i < width) {
+        while (i < context.size()) {
           var window = [],
               value = 0;
 
-          for (var j = 0; j < step && i < width; ++j, ++i)
+          for (var j = 0; j < step && i < context.size(); ++j, ++i)
             window.push(metric_.valueAt(i));
 
           value = summarize(window);
@@ -89,13 +89,13 @@ cubism_contextPrototype.linechart = function() {
 
         svg.append("path").attr("d", line(data))
           .attr("stroke", colors_[m])
-          .attr("stroke-width", step < stroke_width ? step : stroke_width)
+          .attr("stroke-width", stroke_width)
           .attr("fill", "none");
       }
 
       function focus(i) {
         if (i == null) i = width - 1;
-        var value = metric_.valueAt(i);
+        var value = metric_.valueAt(Math.floor(i * context.size() / width));
         span.datum(value).text(isNaN(value) ? null : format);
       }
 
@@ -133,6 +133,12 @@ cubism_contextPrototype.linechart = function() {
   linechart.height = function(_) {
     if (!arguments.length) return height;
     height = +_;
+    return linechart;
+  };
+
+  linechart.width = function(_) {
+    if (!arguments.length) return width;
+    width = +_;
     return linechart;
   };
 
