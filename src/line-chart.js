@@ -10,7 +10,7 @@ cubism_contextPrototype.linechart = function() {
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
       step = 1,
       stroke_width = 1,
-      show_yaxis = false;
+      axis_width = 0;
 
   function linechart(selection) {
 
@@ -73,21 +73,21 @@ cubism_contextPrototype.linechart = function() {
         svg.selectAll("path").remove();
         svg.selectAll("g").remove();
 
-        if (show_yaxis) {
-          svg.append("g")
-            .attr("class", "left axis")
-            .attr("transform", "translate(40, 0)")
-            .call(d3.svg.axis()
-                  .scale(y)
-                  .tickValues([0.4 * ymax, 0.8 * ymax])
-                  .orient("left")
-                  .tickFormat(function(d) {
-                    if (d > 0) { return  d; }
-                  })
-                 );
-        };
+        svg.append("g")
+          .attr("class", "left axis")
+          .attr("transform", "translate(" + axis_width + ", 0)")
+          .call(d3.svg.axis()
+                .scale(y)
+                .tickValues([0.4 * ymax, 0.8 * ymax])
+                .orient("left")
+                .tickFormat(function(d) {
+                  if (d > 0) { return  d; }
+                })
+               );
 
-        svg.append("path").attr("d", line(data))
+        svg.append("path").attr("d", line(data.slice(axis_width)))
+          .attr("transform", "translate(" + axis_width + ", 0)")
+          .attr("width", width - axis_width)
           .attr("stroke", colors_[m])
           .attr("stroke-width", stroke_width)
           .attr("fill", "none");
@@ -190,9 +190,9 @@ cubism_contextPrototype.linechart = function() {
     return linechart;
   };
 
-  linechart.show_yaxis = function(_) {
-    if (!arguments.length) return show_yaxis;
-    show_yaxis = _;
+  linechart.axis_width = function(_) {
+    if (!arguments.length) return axis_width;
+    axis_width = +_;
     return linechart;
   };
 
