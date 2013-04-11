@@ -2,14 +2,15 @@ cubism_contextPrototype.linechart = function() {
   var context = this,
       width = context.size(),
       height = 30,
-      ymax = 100,
       line = d3.svg.line().interpolate("basis"),
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
-      extent = null,
       title = cubism_identity,
       format = d3.format(".2s"),
-      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
+      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
+      step = 1,
+      stroke_width = 1,
+      show_yaxis = false;
 
   function linechart(selection) {
 
@@ -34,24 +35,16 @@ cubism_contextPrototype.linechart = function() {
           id = ++cubism_id,
           metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
           colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
-          extent_ = typeof extent === "function" ? extent.call(that, d, i) : extent,
-          step = context.step(),
           svg = d3.select(that).select("svg"),
           span = d3.select(that).select(".value"),
-          max_,
-          m = colors_.length >> 1,
-          ready;
+          ymax = 100,
+          m = colors_.length >> 1;
 
       function change() {
-        // compute the new extent and ready flag
-        var extent = metric_.extent(),
-            data = [],
+        var data = [],
             value = 0;
 
-        ready = extent.every(isFinite);
-        if (extent_ != null) extent = extent_;
-
-        for (var i = 0; i < width; ++i) {
+        for (var i = 0; i < width; i += step) {
           value = metric_.valueAt(i);
           if (value) {
             data.push(value);
@@ -61,31 +54,35 @@ cubism_contextPrototype.linechart = function() {
         }
 
         ymax = Math.ceil(d3.max(data) / 100) * 100;
+
+        if (ymax == 0) return;
+
         var x = d3.scale.linear().domain([0, data.length]).range([0, width]);
         var y = scale.domain([ymax, 0]).range([0, height]);
 
         line.x(function(d, i) { return x(i); })
             .y(function(d) { return y(d); });
 
+        svg.selectAll("path").remove();
+        svg.selectAll("g").remove();
 
-        svg.selectAll("path").remove()
-        svg.selectAll("g").remove()
-
-        svg.append("g")
-          .attr("class", "left axis")
-          .attr("transform", "translate(40, 0)")
-          .call(d3.svg.axis()
-                .scale(y)
-                .tickValues([0.4 * ymax, 0.8 * ymax])
-                .orient("left")
-                .tickFormat(function(d) {
+        if (show_yaxis) {
+          svg.append("g")
+            .attr("class", "left axis")
+            .attr("transform", "translate(40, 0)")
+            .call(d3.svg.axis()
+                  .scale(y)
+                  .tickValues([0.4 * ymax, 0.8 * ymax])
+                  .orient("left")
+                  .tickFormat(function(d) {
                     if (d > 0) { return  d; }
-                })
-               );
+                  })
+                 );
+        };
 
         svg.append("path").attr("d", line(data))
           .attr("stroke", colors_[m])
-          .attr("stroke-width", 1)
+          .attr("stroke-width", stroke_width)
           .attr("fill", "none");
       }
 
@@ -99,13 +96,9 @@ cubism_contextPrototype.linechart = function() {
       context.on("change.linechart-" + id, change);
       context.on("focus.linechart-" + id, focus);
 
-      // Display the first metric change immediately,
-      // but defer subsequent updates to the canvas change.
-      // Note that someone still needs to listen to the metric,
-      // so that it continues to update automatically.
       metric_.on("change.linechart-" + id, function(start, stop) {
         change(), focus();
-        if (ready) metric_.on("change.linechart-" + id, cubism_identity);
+        if (ymax > 0) metric_.on("change.linechart-" + id, cubism_identity);
       });
     });
   }
@@ -130,12 +123,6 @@ cubism_contextPrototype.linechart = function() {
     }
   };
 
-  linechart.mode = function(_) {
-    if (!arguments.length) return mode;
-    mode = _ + "";
-    return linechart;
-  };
-
   linechart.height = function(_) {
     if (!arguments.length) return height;
     height = +_;
@@ -154,12 +141,6 @@ cubism_contextPrototype.linechart = function() {
     return linechart;
   };
 
-  linechart.extent = function(_) {
-    if (!arguments.length) return extent;
-    extent = _;
-    return linechart;
-  };
-
   linechart.title = function(_) {
     if (!arguments.length) return title;
     title = _;
@@ -175,6 +156,24 @@ cubism_contextPrototype.linechart = function() {
   linechart.colors = function(_) {
     if (!arguments.length) return colors;
     colors = _;
+    return linechart;
+  };
+
+  linechart.step = function(_) {
+    if (!arguments.length) return step;
+    step = _;
+    return linechart;
+  };
+
+  linechart.stroke_width = function(_) {
+    if (!arguments.length) return stroke_width;
+    stroke_width = _;
+    return linechart;
+  };
+
+  linechart.show_yaxis = function(_) {
+    if (!arguments.length) return show_yaxis;
+    show_yaxis = _;
     return linechart;
   };
 
