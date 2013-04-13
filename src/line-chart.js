@@ -85,7 +85,8 @@ cubism_contextPrototype.linechart = function() {
                 })
                );
 
-        svg.append("path").attr("d", line(data.slice(axis_width)))
+        var data_offset = Math.floor(axis_width * data.length / width);
+        svg.append("path").attr("d", line(data.slice(data_offset)))
           .attr("transform", "translate(" + axis_width + ", 0)")
           .attr("width", width - axis_width)
           .attr("stroke", colors_[m])
