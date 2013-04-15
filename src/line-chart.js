@@ -10,7 +10,8 @@ cubism_contextPrototype.linechart = function() {
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
       step = 1,
       stroke_width = 1,
-      axis_width = 0;
+      axis_width = 0,
+      tick_position = [0.4, 0.8];
 
   function linechart(selection) {
 
@@ -78,7 +79,7 @@ cubism_contextPrototype.linechart = function() {
           .attr("transform", "translate(" + axis_width + ", 0)")
           .call(d3.svg.axis()
                 .scale(y)
-                .tickValues([0.4 * ymax, 0.8 * ymax])
+                .tickValues(tick_position.map(function(x) { return x * ymax; }))
                 .orient("left")
                 .tickFormat(function(d) {
                   if (d > 0) { return  d; }
@@ -181,7 +182,7 @@ cubism_contextPrototype.linechart = function() {
 
   linechart.step = function(_) {
     if (!arguments.length) return step;
-    step = _;
+    if (+_ > 0) step = +_;
     return linechart;
   };
 
@@ -194,6 +195,12 @@ cubism_contextPrototype.linechart = function() {
   linechart.axis_width = function(_) {
     if (!arguments.length) return axis_width;
     axis_width = +_;
+    return linechart;
+  };
+
+  linechart.tick_position = function(_) {
+    if (!arguments.length) return tick_position;
+    tick_position = _;
     return linechart;
   };
 
