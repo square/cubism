@@ -7,7 +7,7 @@ cubism_contextPrototype.linechart = function() {
       metrics = cubism_identity,
       title = cubism_identity,
       format = d3.format(".2s"),
-      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
+      colors = ["#08519c","#74c476","#6baed6","#006d2c","#3182bd","#bae4b3","#bdd7e7","#31a354"],
       step = 1,
       stroke_width = 1,
       axis_width = 0,
@@ -127,8 +127,16 @@ cubism_contextPrototype.linechart = function() {
 
         for (var m in metrics_) {
           var value = metrics_[m].valueAt(Math.floor(i * context.size() / width));
-          var txt_value = metrics_[m].toString() + ": " + (isNaN(value) ? "n/a" : format(value));
-          svg.select(".toolpit-text").append("tspan").attr("x", 10).attr("y", 15 + 15 * m).text(txt_value);
+
+          svg.select(".toolpit-text").append("tspan")
+            .attr("x", 10).attr("y", 15 + 15 * m)
+            .attr("style", "font-weight:bold")
+            .text(metrics_[m].toString() + ": ");
+
+          svg.select(".toolpit-text").append("tspan")
+            .attr("y", 15 + 15 * m)
+            .attr("style", "stroke:" + colors[m])
+            .text(isNaN(value) ? "n/a" : format(value));
         }
 
         var txt_width = 10,
