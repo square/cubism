@@ -118,7 +118,6 @@ cubism_contextPrototype.linechart = function() {
 
         for (var m in metrics_) {
           var value = metrics_[m].valueAt(Math.floor(i * context.size() / width));
-          console.log(m, i, value, metrics_[m]);
           var txt_value = metrics_[m].toString() + ": " + (isNaN(value) ? "n/a" : format(value));
           svg.select(".toolpit-text").append("tspan").attr("x", 10).attr("y", 15 + 15 * m).text(txt_value);
         }
@@ -131,7 +130,7 @@ cubism_contextPrototype.linechart = function() {
         });
 
         var dx = (i < width - txt_width - 10) ? i : i - txt_width - 10,
-            dy = 0.8 * height - txt_height;
+            dy = 0.9 * height - txt_height;
         svg.select(".toolpit").attr("transform", "translate(" + dx + ", " + dy + ")");
         svg.select(".toolpit-rect").attr("width", txt_width);
         svg.select(".toolpit-rect").attr("height", txt_height);
@@ -141,13 +140,11 @@ cubism_contextPrototype.linechart = function() {
       context.on("change.linechart-" + id, change);
       context.on("focus.linechart-" + id, focus);
 
-      if (metrics_.length > 0) {
-      /* Tracking the changes on the first metric in the group is sufficiant
-         given that things should be updated synchronizely */
-        metrics_[0].on("change.linechart-" + id, function(start, stop) {
+      for (var m in metrics_) {
+        metrics_[m].on("change.linechart-" + id, function(start, stop) {
           change(), focus();
           if (ymax > 0)
-              metrics_[0].on("change.linechart-" + id, cubism_identity);
+              metrics_[m].on("change.linechart-" + id, cubism_identity);
         });
       }
     });
