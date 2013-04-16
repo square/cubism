@@ -4,7 +4,7 @@ cubism_contextPrototype.linechart = function() {
       height = 30,
       summarize = function(d) { if (d.length > 0) { return d[0]; } else { return 0; } }
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
-      metric = cubism_identity,
+      metrics = cubism_identity,
       title = cubism_identity,
       format = d3.format(".2s"),
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
@@ -16,33 +16,26 @@ cubism_contextPrototype.linechart = function() {
   function linechart(selection) {
 
     selection
-        .on("mousemove.linechart", function() { context.focus(Math.round(d3.mouse(this)[0])); })
-        .on("mouseout.linechart", function() { context.focus(null); });
+      .on("mousemove.linechart", function() { context.focus(Math.round(d3.mouse(this)[0])); })
+      .on("mouseout.linechart", function() { context.focus(null); });
 
     selection.append("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-    selection.append("span")
-        .attr("class", "title")
-        .text(title);
-
-    selection.append("span")
-        .attr("class", "value");
+      .attr("width", width)
+      .attr("height", height);
 
     selection.each(function(d, i) {
 
       var that = this,
+          title_ = typeof title === "function" ? title.call(that, d, i) : title,
+          metrics_ = typeof metrics === "function" ? metrics.call(that, d, i) : metrics,
           id = ++cubism_id,
-          metric_ = typeof metric === "function" ? metric.call(that, d, i) : metric,
-          colors_ = typeof colors === "function" ? colors.call(that, d, i) : colors,
           line = d3.svg.line().interpolate("basis"),
           svg = d3.select(that).select("svg"),
-          span = d3.select(that).select(".value"),
-          ymax = 100,
-          m = colors_.length >> 1;
+          ymax = 100;
 
       function change() {
+        if (metrics_.length == 0) return;
+
         var data = [],
             i = 0;
 
@@ -51,7 +44,7 @@ cubism_contextPrototype.linechart = function() {
               value = 0;
 
           for (var j = 0; j < step && i < context.size(); ++j, ++i)
-            window.push(metric_.valueAt(i));
+            window.push(metrics_[0].valueAt(i));
 
           value = summarize(window);
           if (isFinite(value)) {
@@ -90,25 +83,64 @@ cubism_contextPrototype.linechart = function() {
         svg.append("path").attr("d", line(data.slice(data_offset)))
           .attr("transform", "translate(" + axis_width + ", 0)")
           .attr("width", width - axis_width)
-          .attr("stroke", colors_[m])
+          .attr("stroke", colors[0])
           .attr("stroke-width", stroke_width)
           .attr("fill", "none");
+
+        svg.append("g").attr("class", "toolpit");
+
+        svg.select(".toolpit").append("rect")
+          .attr("class", "toolpit-rect")
+          .attr("x", 5)
+          .attr("rx", 5)
+          .attr("ry", 5)
+          .attr("width", 100)
+          .attr("height", 30)
+          .attr("stroke", "grey")
+          .attr("stroke-width", 2)
+          .attr("fill", "rgb(255,255,255)")
+          .attr("fill-opacity", 0.8);
+
+        svg.select(".toolpit").append("text")
+          .attr("class", "toolpit-text")
+          .attr("x", 10)
+          .attr("y", 20)
+          .attr("font-family", "courier")
+          .attr("font-size", 12);
       }
 
       function focus(i) {
-        if (i == null) i = width - 1;
-        var value = metric_.valueAt(Math.floor(i * context.size() / width));
-        span.datum(value).text(isNaN(value) ? null : format);
+        if (i == null)
+            i = width - 1;
+
+        if (metrics.length == 0)
+            return;
+
+        var value = metrics_[0].valueAt(Math.floor(i * context.size() / width));
+        var txt_value = title_ + ": " + (isNaN(value) ? "n/a" : format(value));
+        svg.select(".toolpit-text").text(txt_value);
+
+        var txt_width = 10;
+        svg.select(".toolpit-text").each(function() {
+          txt_width = Math.max(txt_width, this.getBBox().width + 10);
+        });
+
+        var j = (i < width - txt_width - 10) ? i : i - txt_width - 10;
+        svg.select(".toolpit").attr("transform", "translate(" + j + ", " + 0.6 * height + ")");
+        svg.select(".toolpit-rect").attr("width", txt_width);
       }
 
       // Update the chart when the context changes.
       context.on("change.linechart-" + id, change);
       context.on("focus.linechart-" + id, focus);
 
-      metric_.on("change.linechart-" + id, function(start, stop) {
-        change(), focus();
-        if (ymax > 0) metric_.on("change.linechart-" + id, cubism_identity);
-      });
+      if (metrics_.length > 0) {
+        metrics_[0].on("change.linechart-" + id, function(start, stop) {
+          change(), focus();
+          if (ymax > 0)
+              metrics_[0].on("change.linechart-" + id, cubism_identity);
+        });
+      }
     });
   }
 
@@ -122,11 +154,11 @@ cubism_contextPrototype.linechart = function() {
         .each(remove)
         .remove();
 
-    selection.selectAll(".title,.value")
+    selection.selectAll(".toolpit")
         .remove();
 
     function remove(d) {
-      d.metric.on("change.linechart-" + d.id, null);
+      d.metrics[0].on("change.linechart-" + d.id, null);
       context.on("change.linechart-" + d.id, null);
       context.on("focus.linechart-" + d.id, null);
     }
@@ -150,9 +182,9 @@ cubism_contextPrototype.linechart = function() {
     return linechart;
   };
 
-  linechart.metric = function(_) {
-    if (!arguments.length) return metric;
-    metric = _;
+  linechart.metrics = function(_) {
+    if (!arguments.length) return metrics;
+    metrics = _;
     return linechart;
   };
 
@@ -206,3 +238,4 @@ cubism_contextPrototype.linechart = function() {
 
   return linechart;
 };
+
