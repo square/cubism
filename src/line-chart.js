@@ -30,36 +30,45 @@ cubism_contextPrototype.linechart = function() {
           id = ++cubism_id,
           line = d3.svg.line().interpolate("basis"),
           svg = d3.select(that).select("svg"),
-          ymax = 100;
+          ready = false;
 
       function change() {
-        if (metrics_.length == 0) return;
-
-        var data = [],
-            i = 0;
-
-        while (i < context.size()) {
-          var window = [],
-              value = 0;
-
-          for (var j = 0; j < step && i < context.size(); ++j, ++i)
-            window.push(metrics_[0].valueAt(i));
-
-          value = summarize(window);
-          if (isFinite(value)) {
-            data.push(value);
-          } else {
-            data.push(0);
-          }
-        }
-
-        ymax = Math.ceil(d3.max(data) / 100) * 100;
-
-        if (ymax == 0)
+        if (metrics_.length == 0)
             return;
 
-        var x = d3.scale.linear().domain([0, data.length]).range([0, width]);
-        var y = scale.domain([ymax, 0]).range([0, height]);
+        var data_set = [],
+            data_len = 0,
+            data_max = 0;
+
+        for (var m in metrics_) {
+          var data = [],
+              i = 0;
+
+          while (i < context.size()) {
+            var window = [];
+
+            for (var j = 0; j < step && i < context.size(); ++j, ++i) {
+              window.push(metrics_[m].valueAt(i));
+            }
+
+            var value = summarize(window);
+            if (isFinite(value)) {
+              data.push(value);
+            } else {
+              data.push(0);
+            }
+          }
+
+          data_set.push(data);
+          data_len = data.length;
+          data_max = Math.max(data_max, Math.ceil(d3.max(data) / 100) * 100);
+        }
+
+        if (data_max == 0)
+            return;
+        ready = true;
+        var x = d3.scale.linear().domain([0, data_len]).range([0, width]);
+        var y = scale.domain([data_max, 0]).range([0, height]);
 
         line.x(function(d, i) { return x(i); })
             .y(function(d) { return y(d); });
@@ -72,20 +81,22 @@ cubism_contextPrototype.linechart = function() {
           .attr("transform", "translate(" + axis_width + ", 0)")
           .call(d3.svg.axis()
                 .scale(y)
-                .tickValues(tick_position.map(function(x) { return x * ymax; }))
+                .tickValues(tick_position.map(function(x) { return x * data_max; }))
                 .orient("left")
                 .tickFormat(function(d) {
                   if (d > 0) { return  d; }
                 })
                );
 
-        var data_offset = Math.floor(axis_width * data.length / width);
-        svg.append("path").attr("d", line(data.slice(data_offset)))
-          .attr("transform", "translate(" + axis_width + ", 0)")
-          .attr("width", width - axis_width)
-          .attr("stroke", colors[0])
-          .attr("stroke-width", stroke_width)
-          .attr("fill", "none");
+        var data_offset = Math.floor(axis_width * data_len / width);
+        for (var d in data_set) {
+          svg.append("path").attr("d", line(data_set[d].slice(data_offset)))
+            .attr("transform", "translate(" + axis_width + ", 0)")
+            .attr("width", width - axis_width)
+            .attr("stroke", colors[d])
+            .attr("stroke-width", stroke_width)
+            .attr("fill", "none");
+        }
 
         svg.append("g").attr("class", "toolpit");
 
@@ -94,8 +105,6 @@ cubism_contextPrototype.linechart = function() {
           .attr("x", 5)
           .attr("rx", 5)
           .attr("ry", 5)
-          .attr("width", 100)
-          .attr("height", 30)
           .attr("stroke", "grey")
           .attr("stroke-width", 2)
           .attr("fill", "rgb(255,255,255)")
@@ -143,8 +152,8 @@ cubism_contextPrototype.linechart = function() {
       for (var m in metrics_) {
         metrics_[m].on("change.linechart-" + id, function(start, stop) {
           change(), focus();
-          if (ymax > 0)
-              metrics_[m].on("change.linechart-" + id, cubism_identity);
+          if (ready)
+            metrics_[m].on("change.linechart-" + id, cubism_identity);
         });
       }
     });
