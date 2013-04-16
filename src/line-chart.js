@@ -26,7 +26,6 @@ cubism_contextPrototype.linechart = function() {
     selection.each(function(d, i) {
 
       var that = this,
-          title_ = typeof title === "function" ? title.call(that, d, i) : title,
           metrics_ = typeof metrics === "function" ? metrics.call(that, d, i) : metrics,
           id = ++cubism_id,
           line = d3.svg.line().interpolate("basis"),
@@ -56,7 +55,8 @@ cubism_contextPrototype.linechart = function() {
 
         ymax = Math.ceil(d3.max(data) / 100) * 100;
 
-        if (ymax == 0) return;
+        if (ymax == 0)
+            return;
 
         var x = d3.scale.linear().domain([0, data.length]).range([0, width]);
         var y = scale.domain([ymax, 0]).range([0, height]);
@@ -103,31 +103,38 @@ cubism_contextPrototype.linechart = function() {
 
         svg.select(".toolpit").append("text")
           .attr("class", "toolpit-text")
-          .attr("x", 10)
-          .attr("y", 20)
           .attr("font-family", "courier")
           .attr("font-size", 12);
       }
 
       function focus(i) {
         if (i == null)
-            i = width - 1;
+          i = width - 1;
 
         if (metrics.length == 0)
-            return;
+          return;
 
-        var value = metrics_[0].valueAt(Math.floor(i * context.size() / width));
-        var txt_value = title_ + ": " + (isNaN(value) ? "n/a" : format(value));
-        svg.select(".toolpit-text").text(txt_value);
+        svg.select(".toolpit-text").selectAll("tspan").remove();
 
-        var txt_width = 10;
+        for (var m in metrics_) {
+          var value = metrics_[m].valueAt(Math.floor(i * context.size() / width));
+          console.log(m, i, value, metrics_[m]);
+          var txt_value = metrics_[m].toString() + ": " + (isNaN(value) ? "n/a" : format(value));
+          svg.select(".toolpit-text").append("tspan").attr("x", 10).attr("y", 15 + 15 * m).text(txt_value);
+        }
+
+        var txt_width = 10,
+            txt_height = 10;
         svg.select(".toolpit-text").each(function() {
           txt_width = Math.max(txt_width, this.getBBox().width + 10);
+          txt_height = Math.max(txt_height, this.getBBox().height + 10);
         });
 
-        var j = (i < width - txt_width - 10) ? i : i - txt_width - 10;
-        svg.select(".toolpit").attr("transform", "translate(" + j + ", " + 0.6 * height + ")");
+        var dx = (i < width - txt_width - 10) ? i : i - txt_width - 10,
+            dy = 0.8 * height - txt_height;
+        svg.select(".toolpit").attr("transform", "translate(" + dx + ", " + dy + ")");
         svg.select(".toolpit-rect").attr("width", txt_width);
+        svg.select(".toolpit-rect").attr("height", txt_height);
       }
 
       // Update the chart when the context changes.
@@ -135,6 +142,8 @@ cubism_contextPrototype.linechart = function() {
       context.on("focus.linechart-" + id, focus);
 
       if (metrics_.length > 0) {
+      /* Tracking the changes on the first metric in the group is sufficiant
+         given that things should be updated synchronizely */
         metrics_[0].on("change.linechart-" + id, function(start, stop) {
           change(), focus();
           if (ymax > 0)
