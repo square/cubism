@@ -6,7 +6,7 @@ cubism_contextPrototype.linechart = function() {
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metrics = cubism_identity,
       title = cubism_identity,
-      format = d3.format(".2s"),
+      format = d3.format("f"),
       colors = ["#08519c","#74c476","#6baed6","#006d2c","#3182bd","#bae4b3","#bdd7e7","#31a354"],
       step = 1,
       stroke_width = 1,
@@ -61,11 +61,18 @@ cubism_contextPrototype.linechart = function() {
 
           data_set.push(data);
           data_len = data.length;
-          data_max = Math.max(data_max, Math.ceil(d3.max(data) / 100) * 100);
+          var mm = d3.max(data);
+
+          if (mm == 0)
+            continue;
+
+          var hh = Math.pow(10, Math.floor(Math.log(mm < 1 ? 1 : mm) / Math.LN10));
+          data_max = Math.max(data_max, (1 + Math.floor(mm / hh)) * hh);
         }
 
         if (data_max == 0)
             return;
+
         ready = true;
         var x = d3.scale.linear().domain([0, data_len]).range([0, width]);
         var y = scale.domain([data_max, 0]).range([0, height]);
