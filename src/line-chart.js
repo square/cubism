@@ -7,6 +7,7 @@ cubism_contextPrototype.linechart = function() {
       metrics = cubism_identity,
       title = cubism_identity,
       format = d3.format("f"),
+      tickFormat = function(d) { if (d > 0) { return  d; } }
       colors = ["#08519c","#74c476","#6baed6","#006d2c","#3182bd","#bae4b3","#bdd7e7","#31a354"],
       step = 1,
       stroke_width = 1,
@@ -90,9 +91,7 @@ cubism_contextPrototype.linechart = function() {
                 .scale(y)
                 .tickValues(tick_position.map(function(x) { return x * data_max; }))
                 .orient("left")
-                .tickFormat(function(d) {
-                  if (d > 0) { return  d; }
-                })
+                .tickFormat(tickFormat)
                );
 
         var data_offset = Math.floor(axis_width * data_len / width);
@@ -233,6 +232,12 @@ cubism_contextPrototype.linechart = function() {
   linechart.format = function(_) {
     if (!arguments.length) return format;
     format = _;
+    return linechart;
+  };
+
+  linechart.tickFormat = function(_) {
+    if (!arguments.length) return tickFormat;
+    tickFormat = _;
     return linechart;
   };
 
