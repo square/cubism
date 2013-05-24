@@ -12,7 +12,8 @@ cubism_contextPrototype.linechart = function() {
       step = 1,
       stroke_width = 1,
       axis_width = 0,
-      tick_position = [0.4, 0.8];
+      tick_position = [0.4, 0.8],
+      auto_min = false;
 
   function linechart(selection) {
 
@@ -39,7 +40,8 @@ cubism_contextPrototype.linechart = function() {
 
         var data_set = [],
             data_len = 0,
-            data_max = 0;
+            data_max = 0,
+            data_min = 0;
 
         for (var m in metrics_) {
           var data = [],
@@ -63,12 +65,21 @@ cubism_contextPrototype.linechart = function() {
           data_set.push(data);
           data_len = data.length;
           var mm = d3.max(data);
+          var nn = d3.min(data);
 
           if (mm == 0)
             continue;
 
           var hh = Math.pow(10, Math.floor(Math.log(mm < 1 ? 1 : mm) / Math.LN10));
+          while (hh > (mm - nn) / 2) {
+            hh = hh / 10;
+          }
+
           data_max = Math.max(data_max, (1 + Math.floor(mm / hh)) * hh);
+
+          if (auto_min) {
+            data_min = Math.floor(nn / hh) * hh;
+          }
         }
 
         if (data_max == 0)
@@ -76,7 +87,7 @@ cubism_contextPrototype.linechart = function() {
 
         ready = true;
         var x = d3.scale.linear().domain([0, data_len]).range([0, width]);
-        var y = scale.domain([data_max, 0]).range([0, height]);
+        var y = scale.domain([data_max, data_min]).range([0, height]);
 
         line.x(function(d, i) { return x(i); })
             .y(function(d) { return y(d); });
@@ -89,7 +100,9 @@ cubism_contextPrototype.linechart = function() {
           .attr("transform", "translate(" + axis_width + ", 0)")
           .call(d3.svg.axis()
                 .scale(y)
-                .tickValues(tick_position.map(function(x) { return x * data_max; }))
+                .tickValues(tick_position.map(function(x) {
+                  return x * data_max + (1 - x) * data_min;
+                }))
                 .orient("left")
                 .tickFormat(tickFormat)
                );
@@ -268,6 +281,12 @@ cubism_contextPrototype.linechart = function() {
   linechart.tick_position = function(_) {
     if (!arguments.length) return tick_position;
     tick_position = _;
+    return linechart;
+  };
+
+  linechart.auto_min = function(_) {
+    if (!arguments.length) return auto_min;
+    auto_min = _;
     return linechart;
   };
 
