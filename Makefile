@@ -12,6 +12,7 @@ cubism.v1.js: \
 	src/option.js \
 	src/context.js \
 	src/cube.js \
+	src/librato.js \
 	src/graphite.js \
 	src/gangliaWeb.js \
 	src/metric.js \
