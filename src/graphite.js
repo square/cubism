@@ -65,5 +65,6 @@ function cubism_graphiteParse(text) {
       .substring(i + 1)
       .split(",")
       .slice(1) // the first value is always None?
-      .map(function(d) { return +d; });
+      .map(function(d) { return +d; })
+      .filter(Boolean); // Remove any NaN and return and empty array
 }
