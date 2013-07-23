@@ -1,5 +1,8 @@
-var util = require("util"),
-    d3 = require("d3"),
+var util = require("util");
+
+navigator = {} 
+
+var d3 = require("d3"),
     cubism = require("../cubism.v1").cubism;
 
 util.puts(JSON.stringify({
@@ -12,7 +15,7 @@ util.puts(JSON.stringify({
   "repository": {"type": "git", "url": "http://github.com/square/cubism.git"},
   "main": "./index.js",
   "dependencies": {
-    "d3": "2.9.1"
+    "d3": "3.x"
   },
   "devDependencies": {
     "vows": "0.6.1",

@@ -18,7 +18,7 @@
   },
   "main": "./index.js",
   "dependencies": {
-    "d3": "2.9.1"
+    "d3": "3.x"
   },
   "devDependencies": {
     "vows": "0.6.1",
