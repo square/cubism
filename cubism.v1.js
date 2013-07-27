@@ -28,42 +28,60 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
+      seek = 0,
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       timeout,
       focus;
 
   function update() {
-    var now = Date.now();
-    stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
-    start0 = new Date(stop0 - size * step);
-    stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
-    start1 = new Date(stop1 - size * step);
-    scale.domain([start0, stop0]);
+    if(seek != 0){
+      stop0 = new Date(Math.floor(seek / step) * step);
+      start0 = new Date(stop0 - size * step);
+      stop1 = stop0;
+      start1 = start0;
+      scale.domain([start0, stop0]);
+    } else {
+      var now = Date.now();
+      stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
+      start0 = new Date(stop0 - size * step);
+      stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
+      start1 = new Date(stop1 - size * step);
+      scale.domain([start0, stop0]);
+    }
     return context;
   }
 
   context.start = function() {
-    if (timeout) clearTimeout(timeout);
-    var delay = +stop1 + serverDelay - Date.now();
-
-    // If we're too late for the first prepare event, skip it.
-    if (delay < clientDelay) delay += step;
-
-    timeout = setTimeout(function prepare() {
-      stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
-      start1 = new Date(stop1 - size * step);
-      event.prepare.call(context, start1, stop1);
-
-      setTimeout(function() {
-        scale.domain([start0 = start1, stop0 = stop1]);
+    if(seek != 0) {
+      event.prepare.call(context, start1, stop1, function(){
         event.beforechange.call(context, start1, stop1);
         event.change.call(context, start1, stop1);
-        event.focus.call(context, focus);
-      }, clientDelay);
+        event.focus.call(context, focus);  
+      });
+    } else {
+      // Realtime
+      if (timeout) clearTimeout(timeout);
+      var delay = +stop1 + serverDelay - Date.now();
 
-      timeout = setTimeout(prepare, step);
-    }, delay);
+      // If we're too late for the first prepare event, skip it.
+      if (delay < clientDelay) delay += step;
+
+      timeout = setTimeout(function prepare() {
+        stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
+        start1 = new Date(stop1 - size * step);
+        event.prepare.call(context, start1, stop1);
+
+        setTimeout(function() {
+          scale.domain([start0 = start1, stop0 = stop1]);
+          event.beforechange.call(context, start1, stop1);
+          event.change.call(context, start1, stop1);
+          event.focus.call(context, focus);
+        }, clientDelay);
+
+        timeout = setTimeout(prepare, step);
+      }, delay);
+    }
     return context;
   };
 
@@ -73,6 +91,14 @@ cubism.context = function() {
   };
 
   timeout = setTimeout(context.start, 10);
+
+  // seek = fixed end time
+  // if seek = 0 moves back to real time
+  context.seek = function(_) {
+    if(!arguments.length) return seek;
+    seek = +_;
+    return update().stop().start();
+  };
 
   // Set or get the step interval in milliseconds.
   // Defaults to ten seconds.
@@ -609,25 +635,49 @@ cubism_contextPrototype.metric = function(request, name) {
       fetching;
 
   // Prefetch new data into a temporary array.
-  function prepare(start1, stop) {
-    var steps = Math.min(size, Math.round((start1 - start) / step));
-    if (!steps || fetching) return; // already fetched, or fetching!
-    fetching = true;
-    steps = Math.min(size, steps + cubism_metricOverlap);
-    var start0 = new Date(stop - steps * step);
-    request(start0, stop, step, function(error, data) {
-      fetching = false;
-      if (error) return console.warn(error);
-      var i = isFinite(start) ? Math.round((start0 - start) / step) : 0;
-      for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
-      event.change.call(metric, start, stop);
-    });
+  function prepare(start1, stop, callback) {
+    if(start1 > start) {
+      var steps = Math.min(size, Math.round((start1 - start) / step));
+      if (!steps || fetching) return; // already fetched, or fetching!
+      fetching = true;
+      steps = Math.min(size, steps + cubism_metricOverlap);
+      var start0 = new Date(stop - steps * step);
+      request(start0, stop, step, function(error, data) {
+        fetching = false;
+        if (error) return console.warn(error);
+        var i = isFinite(start) ? Math.round((start0 - start) / step) : 0;
+        for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
+        event.change.call(metric, start, stop);
+        if(callback != null) callback();
+      });
+    } else {
+      var steps = Math.min(size, Math.round((start - start1) / step));
+      if (!steps || fetching) return;
+      fetching = true;
+      // Must be seeking backward... don't need to overlap since we are 
+      // not in realtime
+      //steps = Math.min(size, steps + cubism_metricOverlap);
+      var stop0 = new Date(+start1 + steps * step);
+      request(start1, stop0, step, function(error, data) {
+        fetching = false;
+        if(error) return console.warn(error);
+        prevalues = []
+        for (var j = 0, m = data.length; j < m; ++j) prevalues[j] = data[j];
+        values = prevalues.concat(values);
+        event.change.call(metric, start, stop);
+        if(callback != null) callback();
+      });
+    }
   }
 
   // When the context changes, switch to the new data, ready-or-not!
   function beforechange(start1, stop1) {
     if (!isFinite(start)) start = start1;
-    values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+
+    if(start1 > start)
+      values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+    else
+      values.splice(stop1, Math.max(0, Math.min(size, Math.round((start - start1) / step))));
     start = start1;
     stop = stop1;
   }
@@ -808,17 +858,34 @@ cubism_contextPrototype.horizon = function() {
 
         // if this is an update (with no extent change), copy old values!
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
+        var iEnd = width;
+
         if (this === context) {
           if (max == max_) {
-            i0 = width - cubism_metricOverlap;
-            var dx = (start1 - start) / step;
-            if (dx < width) {
-              var canvas0 = buffer.getContext("2d");
-              canvas0.clearRect(0, 0, width, height);
-              canvas0.drawImage(canvas.canvas, dx, 0, width - dx, height, 0, 0, width - dx, height);
-              canvas.clearRect(0, 0, width, height);
-              canvas.drawImage(canvas0.canvas, 0, 0);
+            if(start1 < start) {
+              // Need to repaint the left side (seeking, not realtime)
+              var dx = (start - start1) / step;
+              iEnd = dx;
+              if(dx < width) {
+                var canvas0 = buffer.getContext("2d");
+                canvas0.clearRect(0, 0, width, height);
+                canvas0.drawImage(canvas.canvas, 0, 0, width - dx, height, dx, 0, width - dx, height);
+                canvas.clearRect(0,0, width, height);
+                canvas.drawImage(canvas0.canvas, 0, 0);
+              }
+            } else {
+              var dx = (start1 - start) / step;
+              i0 = width - dx - cubism_metricOverlap;
+              if (dx < width) {
+                var canvas0 = buffer.getContext("2d");
+                canvas0.clearRect(0, 0, width, height);
+                canvas0.drawImage(canvas.canvas, dx, 0, width - dx, height, 0, 0, width - dx, height);
+                canvas.clearRect(0, 0, width, height);
+                canvas.drawImage(canvas0.canvas, 0, 0);
+              }
             }
+          } else {
+            canvas.clearRect(0,0,width,height);
           }
           start = start1;
         }
@@ -827,7 +894,7 @@ cubism_contextPrototype.horizon = function() {
         scale.domain([0, max_ = max]);
 
         // clear for the new data
-        canvas.clearRect(i0, 0, width - i0, height);
+        canvas.clearRect(i0, 0, iEnd, height);
 
         // record whether there are negative values to display
         var negative;
@@ -841,7 +908,7 @@ cubism_contextPrototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = i0, n = width, y1; i < n; ++i) {
+          for (var i = i0, n = iEnd, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
@@ -865,7 +932,7 @@ cubism_contextPrototype.horizon = function() {
             scale.range([m * height + y0, y0]);
             y0 = scale(0);
 
-            for (var i = i0, n = width, y1; i < n; ++i) {
+            for (var i = i0, n = iEnd, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
               canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
