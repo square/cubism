@@ -56,25 +56,49 @@ cubism_contextPrototype.metric = function(request, name) {
       fetching;
 
   // Prefetch new data into a temporary array.
-  function prepare(start1, stop) {
-    var steps = Math.min(size, Math.round((start1 - start) / step));
-    if (!steps || fetching) return; // already fetched, or fetching!
-    fetching = true;
-    steps = Math.min(size, steps + cubism_metricOverlap);
-    var start0 = new Date(stop - steps * step);
-    request(start0, stop, step, function(error, data) {
-      fetching = false;
-      if (error) return console.warn(error);
-      var i = isFinite(start) ? Math.round((start0 - start) / step) : 0;
-      for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
-      event.change.call(metric, start, stop);
-    });
+  function prepare(start1, stop, callback) {
+    if(start1 > start) {
+      var steps = Math.min(size, Math.round((start1 - start) / step));
+      if (!steps || fetching) return; // already fetched, or fetching!
+      fetching = true;
+      steps = Math.min(size, steps + cubism_metricOverlap);
+      var start0 = new Date(stop - steps * step);
+      request(start0, stop, step, function(error, data) {
+        fetching = false;
+        if (error) return console.warn(error);
+        var i = isFinite(start) ? Math.round((start0 - start) / step) : 0;
+        for (var j = 0, m = data.length; j < m; ++j) values[j + i] = data[j];
+        event.change.call(metric, start, stop);
+        if(callback != null) callback();
+      });
+    } else {
+      var steps = Math.min(size, Math.round((start - start1) / step));
+      if (!steps || fetching) return;
+      fetching = true;
+      // Must be seeking backward... don't need to overlap since we are 
+      // not in realtime
+      //steps = Math.min(size, steps + cubism_metricOverlap);
+      var stop0 = new Date(+start1 + steps * step);
+      request(start1, stop0, step, function(error, data) {
+        fetching = false;
+        if(error) return console.warn(error);
+        prevalues = []
+        for (var j = 0, m = data.length; j < m; ++j) prevalues[j] = data[j];
+        values = prevalues.concat(values);
+        event.change.call(metric, start, stop);
+        if(callback != null) callback();
+      });
+    }
   }
 
   // When the context changes, switch to the new data, ready-or-not!
   function beforechange(start1, stop1) {
     if (!isFinite(start)) start = start1;
-    values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+
+    if(start1 > start)
+      values.splice(0, Math.max(0, Math.min(size, Math.round((start1 - start) / step))));
+    else
+      values.splice(stop1, Math.max(0, Math.min(size, Math.round((start - start1) / step))));
     start = start1;
     stop = stop1;
   }

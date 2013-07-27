@@ -6,42 +6,60 @@ cubism.context = function() {
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
       clientDelay = 5e3,
+      seek = 0,
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       timeout,
       focus;
 
   function update() {
-    var now = Date.now();
-    stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
-    start0 = new Date(stop0 - size * step);
-    stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
-    start1 = new Date(stop1 - size * step);
-    scale.domain([start0, stop0]);
+    if(seek != 0){
+      stop0 = new Date(Math.floor(seek / step) * step);
+      start0 = new Date(stop0 - size * step);
+      stop1 = stop0;
+      start1 = start0;
+      scale.domain([start0, stop0]);
+    } else {
+      var now = Date.now();
+      stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
+      start0 = new Date(stop0 - size * step);
+      stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
+      start1 = new Date(stop1 - size * step);
+      scale.domain([start0, stop0]);
+    }
     return context;
   }
 
   context.start = function() {
-    if (timeout) clearTimeout(timeout);
-    var delay = +stop1 + serverDelay - Date.now();
-
-    // If we're too late for the first prepare event, skip it.
-    if (delay < clientDelay) delay += step;
-
-    timeout = setTimeout(function prepare() {
-      stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
-      start1 = new Date(stop1 - size * step);
-      event.prepare.call(context, start1, stop1);
-
-      setTimeout(function() {
-        scale.domain([start0 = start1, stop0 = stop1]);
+    if(seek != 0) {
+      event.prepare.call(context, start1, stop1, function(){
         event.beforechange.call(context, start1, stop1);
         event.change.call(context, start1, stop1);
-        event.focus.call(context, focus);
-      }, clientDelay);
+        event.focus.call(context, focus);  
+      });
+    } else {
+      // Realtime
+      if (timeout) clearTimeout(timeout);
+      var delay = +stop1 + serverDelay - Date.now();
 
-      timeout = setTimeout(prepare, step);
-    }, delay);
+      // If we're too late for the first prepare event, skip it.
+      if (delay < clientDelay) delay += step;
+
+      timeout = setTimeout(function prepare() {
+        stop1 = new Date(Math.floor((Date.now() - serverDelay) / step) * step);
+        start1 = new Date(stop1 - size * step);
+        event.prepare.call(context, start1, stop1);
+
+        setTimeout(function() {
+          scale.domain([start0 = start1, stop0 = stop1]);
+          event.beforechange.call(context, start1, stop1);
+          event.change.call(context, start1, stop1);
+          event.focus.call(context, focus);
+        }, clientDelay);
+
+        timeout = setTimeout(prepare, step);
+      }, delay);
+    }
     return context;
   };
 
@@ -51,6 +69,14 @@ cubism.context = function() {
   };
 
   timeout = setTimeout(context.start, 10);
+
+  // seek = fixed end time
+  // if seek = 0 moves back to real time
+  context.seek = function(_) {
+    if(!arguments.length) return seek;
+    seek = +_;
+    return update().stop().start();
+  };
 
   // Set or get the step interval in milliseconds.
   // Defaults to ten seconds.
