@@ -145,7 +145,15 @@ cubism_contextPrototype.linechart = function() {
         svg.select(".toolpit-text").selectAll("tspan").remove();
 
         for (var m in metrics_) {
-          var value = metrics_[m].valueAt(Math.floor(i * context.size() / width));
+          var ppp = width / context.size(); // pixel_per_point
+          if (ppp > 1) {
+            var p0 = Math.floor(i / ppp);
+            var p1 = p0 + 1;
+            var pr = i / ppp - p0;
+            var value = (1 - pr) * metrics_[m].valueAt(p0) + pr * metrics_[m].valueAt(p1);
+          } else {
+            var value = metrics_[m].valueAt(i);
+          }
 
           svg.select(".toolpit-text").append("tspan")
             .attr("x", 10).attr("y", 15 + 15 * m)
