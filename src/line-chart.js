@@ -32,7 +32,7 @@ cubism_contextPrototype.linechart = function() {
           id = ++cubism_id,
           line = d3.svg.line().interpolate("basis"),
           svg = d3.select(that).select("svg"),
-          ready = false;
+          ready = 0;
 
       function change() {
         if (metrics_.length == 0)
@@ -85,7 +85,6 @@ cubism_contextPrototype.linechart = function() {
         if (data_max == 0)
             return;
 
-        ready = true;
         var x = d3.scale.linear().domain([0, data_len]).range([0, width]);
         var y = scale.domain([data_max, data_min]).range([0, height]);
 
@@ -133,6 +132,8 @@ cubism_contextPrototype.linechart = function() {
           .attr("class", "toolpit-text")
           .attr("font-family", "courier")
           .attr("font-size", 12);
+
+        ready += 1;
       }
 
       function focus(i) {
@@ -187,8 +188,7 @@ cubism_contextPrototype.linechart = function() {
       for (var m in metrics_) {
         metrics_[m].on("change.linechart-" + id, function(start, stop) {
           change(), focus();
-          if (ready)
-            metrics_[m].on("change.linechart-" + id, cubism_identity);
+          if (ready == metrics_.length) metrics_[m].on("change.linechart-" + id, cubism_identity);
         });
       }
     });
