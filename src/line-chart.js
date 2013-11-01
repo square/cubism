@@ -13,7 +13,8 @@ cubism_contextPrototype.linechart = function() {
       stroke_width = 1,
       axis_width = 0,
       tick_position = [0.4, 0.8],
-      auto_min = false;
+      auto_min = false,
+      auto_max = true;
 
   function linechart(selection) {
 
@@ -41,7 +42,7 @@ cubism_contextPrototype.linechart = function() {
         var data_set = [],
             data_len = 0,
             data_max = 0,
-            data_min = 0;
+            data_min = Infinity;
 
         for (var m in metrics_) {
           var data = [],
@@ -64,26 +65,37 @@ cubism_contextPrototype.linechart = function() {
 
           data_set.push(data);
           data_len = data.length;
-          var mm = d3.max(data);
-          var nn = d3.min(data);
 
-          if (mm == 0)
-            continue;
+          var mm, nn, hh;
 
-          var hh = Math.pow(10, Math.floor(Math.log(mm < 1 ? 1 : mm) / Math.LN10));
-          while (hh > (mm - nn) / 2) {
-            hh = hh / 10;
+          /* the real mininum and maxinum value in the current dataset */
+          mm = d3.max(data);
+          nn = d3.min(data);
+
+          /* constant value */
+          if (mm == nn) {
+            /* if mm is zero, display a default range from -10 to 10 */
+            hh = Math.min(10, hh * 0.2);
+            max = mm + hh;
+            min = mm - hh;
+          }
+          /* there is a range, make it look nice */
+          else {
+            hh = Math.pow(10, Math.floor(Math.log(mm < 1 ? 1 : mm) / Math.LN10));
+            while (hh > (mm - nn) / 2)
+              hh = hh / 10;
+            min = Math.floor(nn / hh) * hh;
+            max = (1 + Math.floor(mm / hh)) * hh
           }
 
-          data_max = Math.max(data_max, (1 + Math.floor(mm / hh)) * hh);
-
-          if (auto_min) {
-            data_min = Math.floor(nn / hh) * hh;
-          }
+          if (auto_min) data_min = Math.min(data_min, min);
+          if (auto_max) data_max = Math.max(data_max, max);
         }
 
-        if (data_max == 0)
-            return;
+        if (!isFinite(data_max))
+          return;
+        if (!isFinite(data_min))
+          data_min = 0;
 
         var x = d3.scale.linear().domain([0, data_len]).range([0, width]);
         var y = scale.domain([data_max, data_min]).range([0, height]);
