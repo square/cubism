@@ -75,7 +75,7 @@ cubism_contextPrototype.linechart = function() {
           /* constant value */
           if (mm == nn) {
             /* if mm is zero, display a default range from -10 to 10 */
-            hh = Math.min(10, hh * 0.2);
+            hh = Math.min(10, mm * 0.2);
             max = mm + hh;
             min = mm - hh;
           }
