@@ -68,6 +68,6 @@ cubism_contextPrototype.axis = function() {
       "tickFormat");
 };
 
-var cubism_axisFormatSeconds = d3.time.format("%I:%M:%S %p"),
-    cubism_axisFormatMinutes = d3.time.format("%I:%M %p"),
+var cubism_axisFormatSeconds = d3.time.format("%H:%M:%S"),
+    cubism_axisFormatMinutes = d3.time.format("%H:%M"),
     cubism_axisFormatDays = d3.time.format("%B %d");
