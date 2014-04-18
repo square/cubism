@@ -5,7 +5,7 @@ cubism_contextPrototype.librato = function(user, token) {
   var source      = {},
       context     = this;
       auth_string = "Basic " + btoa(user + ":" + token);
-      enable_log  = true,
+      enable_log  = false,
       avail_rsts  = [ 1, 60, 900, 3600 ];
 
   function log(msg) { if (enable_log) console.log(msg); }
