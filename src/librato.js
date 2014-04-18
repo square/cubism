@@ -92,14 +92,15 @@ cubism_contextPrototype.librato = function(user, token) {
   }
 
   /* All the logic to query the librato API is here */
-  var librato_request = function(metric, source) {
+  var librato_request = function(composite) {
     var url_prefix  = "https://metrics-api.librato.com/v1/metrics";
 
     function make_url(sdate, edate, step) {
-      var params    = "start_time="  + sdate +
-                      "&end_time="   + edate +
+      var params    = "compose="     + composite +
+                      "&start_time=" + sdate     +
+                      "&end_time="   + edate     +
                       "&resolution=" + find_librato_resolution(sdate, edate, step);
-          full_url  = url_prefix + "/" + metric + "?" + params;
+          full_url  = url_prefix + "?" + params;
 
       log("full_url = " + full_url);
       log_interval(sdate, edate, step);
@@ -149,8 +150,11 @@ cubism_contextPrototype.librato = function(user, token) {
           .header("Librato-User-Agent", 'cubism/' + cubism.version)
           .get(function (error, data) { /* Callback; data available */
             if (!error) {
-              log("# of partial measurements: " + data.measurements[source].length);
-              data.measurements[source].forEach(function(o) { a_values.push(o); });
+              log("# of partial measurements: " + data.measurements[0].length);
+              if (data.measurements.length === 0) {
+                return
+              }
+              data.measurements[0].series.forEach(function(o) { a_values.push(o); });
 
               var still_more_values = 'query' in data && 'next_time' in data.query;
               if (still_more_values) {
@@ -179,16 +183,16 @@ cubism_contextPrototype.librato = function(user, token) {
    * The user will use this method to create a cubism source (librato in this case)
    * and call .metric() as necessary to create metrics.
    */
-  source.metric = function(m_name, m_source) {
+  source.metric = function(m_composite) {
     return context.metric(function(start, stop, step, callback) {
       /* All the librato logic is here; .fire() retrieves the metrics' data */
-      librato_request(m_name, m_source)
+      librato_request(m_composite)
         .fire(cubism_libratoFormatDate(start),
               cubism_libratoFormatDate(stop),
               cubism_libratoFormatDate(step),
               function(a_values) { callback(null, a_values); });
 
-      }, m_name += "");
+      }, m_composite += "");
     };
 
   /* This is not used when the source is librato */
