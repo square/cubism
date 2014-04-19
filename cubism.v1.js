@@ -1,5 +1,5 @@
 (function(exports){
-var cubism = exports.cubism = {version: "1.5.0"};
+var cubism = exports.cubism = {version: "1.6.0"};
 var cubism_id = 0;
 function cubism_identity(d) { return d; }
 cubism.option = function(name, defaultValue) {
@@ -192,19 +192,7 @@ cubism_contextPrototype.librato = function(user, token) {
   var source      = {},
       context     = this;
       auth_string = "Basic " + btoa(user + ":" + token);
-      enable_log  = true,
       avail_rsts  = [ 1, 60, 900, 3600 ];
-
-  function log(msg) { if (enable_log) console.log(msg); }
-
-  function log_interval(start, stop, step) {
-    log("---------------------- Starting request");
-    log("START: " + new Date(start * 1000));
-    log("STOP : " + new Date(stop * 1000));
-    log("STEP : " + step);
-    var nes_num_mes = (stop - start)/step;
-    log("# of measurements necessary: " + nes_num_mes);
-  }
 
   /* Given a step, find the best librato resolution to use.
    *
@@ -279,18 +267,15 @@ cubism_contextPrototype.librato = function(user, token) {
   }
 
   /* All the logic to query the librato API is here */
-  var librato_request = function(metric, source) {
+  var librato_request = function(composite) {
     var url_prefix  = "https://metrics-api.librato.com/v1/metrics";
 
     function make_url(sdate, edate, step) {
-      var params    = "start_time="  + sdate +
-                      "&end_time="   + edate +
+      var params    = "compose="     + composite +
+                      "&start_time=" + sdate     +
+                      "&end_time="   + edate     +
                       "&resolution=" + find_librato_resolution(sdate, edate, step);
-          full_url  = url_prefix + "/" + metric + "?" + params;
-
-      log("full_url = " + full_url);
-      log_interval(sdate, edate, step);
-      return full_url;
+      return url_prefix + "?" + params;
     }
 
     /*
@@ -336,22 +321,18 @@ cubism_contextPrototype.librato = function(user, token) {
           .header("Librato-User-Agent", 'cubism/' + cubism.version)
           .get(function (error, data) { /* Callback; data available */
             if (!error) {
-              log("# of partial measurements: " + data.measurements[source].length);
-              data.measurements[source].forEach(function(o) { a_values.push(o); });
+              if (data.measurements.length === 0) {
+                return
+              }
+              data.measurements[0].series.forEach(function(o) { a_values.push(o); });
 
               var still_more_values = 'query' in data && 'next_time' in data.query;
               if (still_more_values) {
-                log("Requesting more values");
                 actual_request(make_url(data.query.next_time, iedate, step));
               } else {
-                log("total number of measurements from librato: " + a_values.length);
                 var a_adjusted = down_up_sampling(isdate, iedate, step, a_values);
-                log("number of measurements after adjusting time values: " + a_adjusted.length);
                 callback_done(a_adjusted);
               }
-            } else {
-              log("There was an error when performing the librato request:");
-              log(error);
             }
           });
       }
@@ -366,16 +347,16 @@ cubism_contextPrototype.librato = function(user, token) {
    * The user will use this method to create a cubism source (librato in this case)
    * and call .metric() as necessary to create metrics.
    */
-  source.metric = function(m_name, m_source) {
+  source.metric = function(m_composite) {
     return context.metric(function(start, stop, step, callback) {
       /* All the librato logic is here; .fire() retrieves the metrics' data */
-      librato_request(m_name, m_source)
+      librato_request(m_composite)
         .fire(cubism_libratoFormatDate(start),
               cubism_libratoFormatDate(stop),
               cubism_libratoFormatDate(step),
               function(a_values) { callback(null, a_values); });
 
-      }, m_name += "");
+      }, m_composite += "");
     };
 
   /* This is not used when the source is librato */
