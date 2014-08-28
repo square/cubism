@@ -439,6 +439,55 @@ function cubism_graphiteParse(text) {
       .slice(1) // the first value is always None?
       .map(function(d) { return +d; });
 }
+cubism_contextPrototype.influxdb = function(host) {
+  if (!arguments.length) host = "";  // BC I think the host will need to be the url up to db name
+                                     // e.g. http://oldmanpeabody-hueylewis-1.c.influxdb.com:8086/db/test
+                                    // and maybe this: ?u=ben&p=password
+  var source = {},
+      context = this;
+
+    // expression:
+    //   .series - name of influx series
+    //
+  source.metric = function(expression) {
+    return context.metric(function(start, stop, step, callback) {
+        var dstart = influxDateFormat(start);
+        var dstop = influxDateFormat(stop);
+        var query = "&q=select+*+from+" + expression.series + "+where"
+            + "+time+<+" + influxDateFormat(stop)
+            + "+and+time+>+" + influxDateFormat(start)
+            + "+group+by+time(" + step * 1000 + "u)";  // convert milliseconds to microseconds
+        var url = host + query;
+
+      d3.xhr(host + query, 'application/json', function(error, data) {
+        if (!data) return callback(new Error("unable to load data"));
+        callback(null, influxMetrics(data));
+      });
+    }, expression);
+  };
+
+  // Returns the InfluxDb host.
+  source.toString = function() {
+    return host;
+  };
+
+  return source;
+};
+
+// Influx expects dates that look like: '2013-08-12 23:32:01.232'
+function influxDateFormat(d){
+    return (d.getTime() / 1000)+'s';
+}
+
+function influxMetrics(dataJson){
+    var json = JSON.parse(dataJson.response);
+    var metricIndex = json[0].columns.length - 1;
+    var metrics = json[0].points.map(function(row){
+        return row[metricIndex];
+    });
+    return metrics;
+}
+
 cubism_contextPrototype.gangliaWeb = function(config) {
   var host = '',
       uriPathPrefix = '/ganglia2/';
