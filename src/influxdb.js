@@ -1,12 +1,11 @@
 cubism_contextPrototype.influxdb = function(host) {
   if (!arguments.length) host = "";
-  // e.g. http://oldmanpeabody-hueylewis-1.c.influxdb.com:8086/db/test?u=ben&p=password
+  // e.g. http://{influxdb}:8086/db/test?u=name&p=password
   var source = {},
       context = this;
 
     // expression:
     //   .series - name of influx series
-    //
   source.metric = function(expression) {
     return context.metric(function(start, stop, step, callback) {
         var query = "&q=select+*+from+" + expression.series + "+where"
@@ -30,7 +29,6 @@ cubism_contextPrototype.influxdb = function(host) {
   return source;
 };
 
-// Influx expects dates that look like: '2013-08-12 23:32:01.232'
 function influxDateFormat(d){
     return (d.getTime() / 1000)+'s';
 }
