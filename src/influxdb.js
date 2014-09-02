@@ -8,10 +8,12 @@ cubism_contextPrototype.influxdb = function(host) {
     //   .series - name of influx series
   source.metric = function(expression) {
     return context.metric(function(start, stop, step, callback) {
-        var query = "&q=select+*+from+" + expression.series + "+where"
+        var query = "&q=select+sum("+expression.column+")+from+" + expression.series
+                + "+group+by+time(" + step * 1000 + "u)+fill(0)"
+                + "+where"
             + "+time+<+" + influxDateFormat(stop)
             + "+and+time+>+" + influxDateFormat(start)
-            + "+group+by+time(" + step * 1000 + "u)";  // convert milliseconds to microseconds
+            ;  // convert milliseconds to microseconds
         var url = host + query;
 
       d3.xhr(url, 'application/json', function(error, data) {
@@ -33,9 +35,13 @@ function influxDateFormat(d){
     return (d.getTime() / 1000)+'s';
 }
 
-function influxMetrics(dataJson){
+function influxMetrics(dataJson, column){
+    var m = column;
     var json = JSON.parse(dataJson.response);
-    var metricIndex = json[0].columns.length - 1;
+    var metricIndex = json[0].columns.indexOf(m);
+    if(metricIndex <0){
+        metricIndex = json[0].columns.length -1;
+    }
     return json[0].points.map(function(row){
         return row[metricIndex];
     });
