@@ -139,7 +139,7 @@ cubism_contextPrototype.librato = function(user, token) {
               }
               data.measurements[0].series.forEach(function(o) { a_values.push(o); });
 
-              var still_more_values = 'query' in data && 'next_time' in data.query;
+              var still_more_values = 'query' in data && 'next_time' in data.query && data.query.next_time !== null;
               if (still_more_values) {
                 actual_request(make_url(data.query.next_time, iedate, step));
               } else {
