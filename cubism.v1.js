@@ -24,6 +24,7 @@ cubism.context = function() {
   var context = new cubism_context,
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
+      length = 1440,
       start0, stop0, // the start and stop for the previous change event
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
@@ -31,9 +32,11 @@ cubism.context = function() {
       event = d3.dispatch("prepare", "beforechange", "change", "focus"),
       scale = context.scale = d3.time.scale().range([0, size]),
       timeout,
+      xScale,
       focus;
 
   function update() {
+     xScale = size / length >= 1 ? size / length : 1;
     var now = Date.now();
     stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
     start0 = new Date(stop0 - size * step);
@@ -43,6 +46,9 @@ cubism.context = function() {
     return context;
   }
 
+    context.xScale = function(){
+        return xScale;
+    }
   context.start = function() {
     if (timeout) clearTimeout(timeout);
     var delay = +stop1 + serverDelay - Date.now();
@@ -90,6 +96,11 @@ cubism.context = function() {
     return update();
   };
 
+    context.length = function(_) {
+        if (!arguments.length) return length;
+        length = +_;
+        return update();
+    };
   // The server delay is the amount of time we wait for the server to compute a
   // metric. This delay may result from clock skew or from delays collecting
   // metrics from various hosts. Defaults to 4 seconds.
@@ -783,9 +794,10 @@ cubism_metricPrototype.divide = cubism_metricOperator("/", function(left, right)
 });
 cubism_contextPrototype.horizon = function() {
   var context = this,
+      xScale = context.xScale(),
       mode = "offset",
       buffer = document.createElement("canvas"),
-      width = buffer.width = context.size(),
+      width = buffer.width = context.size() * xScale,
       height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -875,7 +887,7 @@ cubism_contextPrototype.horizon = function() {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
-            canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
+            canvas.fillRect(i*xScale, y1 = scale(y1), xScale, y0 - y1);
           }
         }
 
@@ -898,7 +910,7 @@ cubism_contextPrototype.horizon = function() {
             for (var i = i0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
-              canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
+              canvas.fillRect(i*xScale, scale(-y1), xScale, y0 - scale(-y1));
             }
           }
         }

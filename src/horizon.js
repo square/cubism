@@ -1,8 +1,9 @@
 cubism_contextPrototype.horizon = function() {
   var context = this,
+      xScale = context.xScale(),
       mode = "offset",
       buffer = document.createElement("canvas"),
-      width = buffer.width = context.size(),
+      width = buffer.width = context.size() * xScale,
       height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -92,7 +93,7 @@ cubism_contextPrototype.horizon = function() {
             y1 = metric_.valueAt(i);
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
-            canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
+            canvas.fillRect(i*xScale, y1 = scale(y1), xScale, y0 - y1);
           }
         }
 
@@ -115,7 +116,7 @@ cubism_contextPrototype.horizon = function() {
             for (var i = i0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
-              canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
+              canvas.fillRect(i*xScale, scale(-y1), xScale, y0 - scale(-y1));
             }
           }
         }
