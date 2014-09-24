@@ -1,5 +1,6 @@
 cubism_contextPrototype.horizon = function() {
   var context = this,
+      xScale = context.xScale(),
       mode = "offset",
       buffer = document.createElement("canvas"),
       width = buffer.width = context.size(),
@@ -10,15 +11,16 @@ cubism_contextPrototype.horizon = function() {
       title = cubism_identity,
       format = d3.format(".2s"),
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
-
+    var rLeft, rWidth;
   function horizon(selection) {
 
     selection
         .on("mousemove.horizon", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.horizon", function() { context.focus(null); });
 
+
     selection.append("canvas")
-        .attr("width", width)
+        .attr("width", width * xScale)
         .attr("height", height);
 
     selection.append("span")
@@ -57,13 +59,18 @@ cubism_contextPrototype.horizon = function() {
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
-            i0 = width - cubism_metricOverlap;
+            i0 = width - (cubism_metricOverlap);
             var dx = (start1 - start) / step;
             if (dx < width) {
+                buffer.width = width * xScale;
               var canvas0 = buffer.getContext("2d");
-              canvas0.clearRect(0, 0, width, height);
-              canvas0.drawImage(canvas.canvas, dx, 0, width - dx, height, 0, 0, width - dx, height);
-              canvas.clearRect(0, 0, width, height);
+                rWidth = width * xScale;
+              canvas0.clearRect(0, 0, rWidth, height);
+                rLeft = dx * xScale;
+                rWidth = (width - dx) * xScale;
+              canvas0.drawImage(canvas.canvas, rLeft, 0, rWidth, height, 0, 0, rWidth, height);
+                rWidth = width * xScale ;
+              canvas.clearRect(0, 0, rWidth, height);
               canvas.drawImage(canvas0.canvas, 0, 0);
             }
           }
@@ -74,12 +81,16 @@ cubism_contextPrototype.horizon = function() {
         scale.domain([0, max_ = max]);
 
         // clear for the new data
-        canvas.clearRect(i0, 0, width - i0, height);
+          rWidth = (width - i0) * xScale;
+          rLeft = i0 * xScale;
+        canvas.clearRect(rLeft, 0, rWidth, height);
 
         // record whether there are negative values to display
         var negative;
 
         // positive bands
+        var time = new Date();
+
         for (var j = 0; j < m; ++j) {
           canvas.fillStyle = colors_[m + j];
 
@@ -90,9 +101,11 @@ cubism_contextPrototype.horizon = function() {
 
           for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
+              rLeft = i*xScale;
+              rWidth = xScale;
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
-            canvas.fillRect(i, y1 = scale(y1), 1, y0 - y1);
+            canvas.fillRect(rLeft, y1 = scale(y1), rWidth, y0 - y1);
           }
         }
 
@@ -115,7 +128,7 @@ cubism_contextPrototype.horizon = function() {
             for (var i = i0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
-              canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
+              canvas.fillRect(i*xScale, scale(-y1), xScale, y0 - scale(-y1));
             }
           }
         }

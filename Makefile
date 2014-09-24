@@ -14,6 +14,7 @@ cubism.v1.js: \
 	src/cube.js \
 	src/librato.js \
 	src/graphite.js \
+	src/influxdb.js \
 	src/gangliaWeb.js \
 	src/metric.js \
 	src/metric-constant.js \
