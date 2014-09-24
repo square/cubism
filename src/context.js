@@ -14,8 +14,10 @@ cubism.context = function() {
       focus;
 
   function update() {
-     xScale = size / length >= 1 ? size / length : 1;
-    var now = Date.now();
+     xScale = length / size >= 1 ? length / size : 1;
+      scale.range([0, size * xScale]);
+
+      var now = Date.now();
     stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
     start0 = new Date(stop0 - size * step);
     stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
@@ -26,7 +28,8 @@ cubism.context = function() {
 
     context.xScale = function(){
         return xScale;
-    }
+    };
+
   context.start = function() {
     if (timeout) clearTimeout(timeout);
     var delay = +stop1 + serverDelay - Date.now();
@@ -70,7 +73,7 @@ cubism.context = function() {
   // Defaults to 1440 (four hours at ten seconds).
   context.size = function(_) {
     if (!arguments.length) return size;
-    scale.range([0, size = +_]);
+      size = +_;
     return update();
   };
 

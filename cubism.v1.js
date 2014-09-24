@@ -36,19 +36,23 @@ cubism.context = function() {
       focus;
 
   function update() {
-     xScale = size / length >= 1 ? size / length : 1;
-    var now = Date.now();
+     xScale = length / size >= 1 ? length / size : 1;
+      scale.range([0, size * xScale]);
+
+      var now = Date.now();
     stop0 = new Date(Math.floor((now - serverDelay - clientDelay) / step) * step);
     start0 = new Date(stop0 - size * step);
     stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
     start1 = new Date(stop1 - size * step);
     scale.domain([start0, stop0]);
+    console.log('scale.domain: ', start0, stop0);
     return context;
   }
 
     context.xScale = function(){
         return xScale;
-    }
+    };
+
   context.start = function() {
     if (timeout) clearTimeout(timeout);
     var delay = +stop1 + serverDelay - Date.now();
@@ -92,7 +96,7 @@ cubism.context = function() {
   // Defaults to 1440 (four hours at ten seconds).
   context.size = function(_) {
     if (!arguments.length) return size;
-    scale.range([0, size = +_]);
+      size = +_;
     return update();
   };
 
@@ -797,7 +801,7 @@ cubism_contextPrototype.horizon = function() {
       xScale = context.xScale(),
       mode = "offset",
       buffer = document.createElement("canvas"),
-      width = buffer.width = context.size() * xScale,
+      width = buffer.width = context.size(),
       height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -805,15 +809,16 @@ cubism_contextPrototype.horizon = function() {
       title = cubism_identity,
       format = d3.format(".2s"),
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
-
+    var rLeft, rWidth;
   function horizon(selection) {
 
     selection
         .on("mousemove.horizon", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.horizon", function() { context.focus(null); });
 
+
     selection.append("canvas")
-        .attr("width", width)
+        .attr("width", width * xScale)
         .attr("height", height);
 
     selection.append("span")
@@ -852,13 +857,22 @@ cubism_contextPrototype.horizon = function() {
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
-            i0 = width - cubism_metricOverlap;
+            i0 = width - (cubism_metricOverlap);
             var dx = (start1 - start) / step;
+              console.log("dx = (start1 - start)/ step", dx, start1, start, step);
+              console.log('width', width);
             if (dx < width) {
+                buffer.width = width * xScale;
               var canvas0 = buffer.getContext("2d");
-              canvas0.clearRect(0, 0, width, height);
-              canvas0.drawImage(canvas.canvas, dx, 0, width - dx, height, 0, 0, width - dx, height);
-              canvas.clearRect(0, 0, width, height);
+                rWidth = width * xScale;
+                console.log("clear canvas0? left, width", 0, rWidth);
+              canvas0.clearRect(0, 0, rWidth, height);
+                rLeft = dx * xScale;
+                rWidth = (width - dx) * xScale;
+                console.log("draw old canvas? rLeft, rWidth", rLeft, rWidth);
+              canvas0.drawImage(canvas.canvas, rLeft, 0, rWidth, height, 0, 0, rWidth, height);
+                rWidth = width * xScale ;
+              canvas.clearRect(0, 0, rWidth, height);
               canvas.drawImage(canvas0.canvas, 0, 0);
             }
           }
@@ -869,12 +883,17 @@ cubism_contextPrototype.horizon = function() {
         scale.domain([0, max_ = max]);
 
         // clear for the new data
-        canvas.clearRect(i0, 0, width - i0, height);
+          rWidth = (width - i0) * xScale;
+          rLeft = i0 * xScale;
+        canvas.clearRect(rLeft, 0, rWidth, height);
 
         // record whether there are negative values to display
         var negative;
 
         // positive bands
+        var time = new Date();
+        console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds());
+
         for (var j = 0; j < m; ++j) {
           canvas.fillStyle = colors_[m + j];
 
@@ -885,9 +904,11 @@ cubism_contextPrototype.horizon = function() {
 
           for (var i = i0, n = width, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
+              rLeft = i*xScale;
+              rWidth = xScale;
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
-            canvas.fillRect(i*xScale, y1 = scale(y1), xScale, y0 - y1);
+            canvas.fillRect(rLeft, y1 = scale(y1), rWidth, y0 - y1);
           }
         }
 
@@ -1242,7 +1263,8 @@ function cubism_comparisonRoundOdd(i) {
 cubism_contextPrototype.axis = function() {
   var context = this,
       scale = context.scale,
-      axis_ = d3.svg.axis().scale(scale);
+      axis_ = d3.svg.axis().scale(scale),
+        xScale = context.xScale();
 
   var formatDefault = context.step() < 6e4 ? cubism_axisFormatSeconds
       : context.step() < 864e5 ? cubism_axisFormatMinutes
@@ -1252,10 +1274,10 @@ cubism_contextPrototype.axis = function() {
   function axis(selection) {
     var id = ++cubism_id,
         tick;
-
+      var axisWidth = Math.floor(context.size() * xScale);
     var g = selection.append("svg")
         .datum({id: id})
-        .attr("width", context.size())
+        .attr("width", axisWidth)
         .attr("height", Math.max(28, -axis.tickSize()))
       .append("g")
         .attr("transform", "translate(0," + (axis_.orient() === "top" ? 27 : 4) + ")")
@@ -1274,7 +1296,7 @@ cubism_contextPrototype.axis = function() {
           tick.style("display", "none");
           g.selectAll("text").style("fill-opacity", null);
         } else {
-          tick.style("display", null).attr("x", i).text(format(scale.invert(i)));
+          tick.style("display", null).attr("x", i).text(format(scale.invert(i)));  //affects where the hover time displayes
           var dx = tick.node().getComputedTextLength() + 6;
           g.selectAll("text").style("fill-opacity", function(d) { return Math.abs(scale(d) - i) < dx ? 0 : 1; });
         }
