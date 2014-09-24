@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="22a7117b-befa-494d-b0b5-5ea7b320fdbd" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/axis.js" afterPath="$PROJECT_DIR$/src/axis.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/context.js" afterPath="$PROJECT_DIR$/src/context.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cubism.v1.js" afterPath="$PROJECT_DIR$/cubism.v1.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cubism.v1.min.js" afterPath="$PROJECT_DIR$/cubism.v1.min.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/horizon.js" afterPath="$PROJECT_DIR$/src/horizon.js" />
     </list>
     <ignored path="cubism.iws" />
@@ -41,21 +41,21 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="context.js" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="context.js" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/context.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-3.3397312" vertical-offset="2165" max-vertical-offset="2686">
-              <caret line="25" column="0" selection-start-line="25" selection-start-column="0" selection-end-line="25" selection-end-column="0" />
+            <state vertical-scroll-proportion="-3.9230769" vertical-offset="1241" max-vertical-offset="2686">
+              <caret line="79" column="26" selection-start-line="79" selection-start-column="26" selection-end-line="79" selection-end-column="26" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="horizon.js" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="horizon.js" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/horizon.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-60.153847" vertical-offset="0" max-vertical-offset="3995">
-              <caret line="92" column="0" selection-start-line="92" selection-start-column="0" selection-end-line="92" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.24952015" vertical-offset="3508" max-vertical-offset="4029">
+              <caret line="214" column="19" selection-start-line="214" selection-start-column="19" selection-end-line="214" selection-end-column="19" />
               <folding />
             </state>
           </provider>
@@ -166,20 +166,6 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cubism" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="cubism" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="node_modules" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -390,7 +376,7 @@
       <workItem from="1411168692112" duration="4965000" />
       <workItem from="1411192490267" duration="226000" />
       <workItem from="1411192734727" duration="41000" />
-      <workItem from="1411192843855" duration="30074000" />
+      <workItem from="1411192843855" duration="31060000" />
     </task>
     <task id="LOCAL-00001" summary="Added influxdb adapter">
       <created>1409266385500</created>
@@ -412,7 +398,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="64550000" />
+    <option name="totallyTimeSpent" value="65536000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="22" width="1440" height="874" extended-state="0" />
@@ -779,18 +765,18 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/horizon.js">
+    <entry file="file://$PROJECT_DIR$/src/context.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-60.153847" vertical-offset="0" max-vertical-offset="3995">
-          <caret line="92" column="0" selection-start-line="92" selection-start-column="0" selection-end-line="92" selection-end-column="0" />
+        <state vertical-scroll-proportion="-3.9230769" vertical-offset="1241" max-vertical-offset="2686">
+          <caret line="79" column="26" selection-start-line="79" selection-start-column="26" selection-end-line="79" selection-end-column="26" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/context.js">
+    <entry file="file://$PROJECT_DIR$/src/horizon.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-3.3397312" vertical-offset="2165" max-vertical-offset="2686">
-          <caret line="25" column="0" selection-start-line="25" selection-start-column="0" selection-end-line="25" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.24952015" vertical-offset="3508" max-vertical-offset="4029">
+          <caret line="214" column="19" selection-start-line="214" selection-start-column="19" selection-end-line="214" selection-end-column="19" />
           <folding />
         </state>
       </provider>

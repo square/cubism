@@ -24,7 +24,7 @@ cubism.context = function() {
   var context = new cubism_context,
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
-      length = 1440,
+      componentWidth = 1440,
       start0, stop0, // the start and stop for the previous change event
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
@@ -36,7 +36,7 @@ cubism.context = function() {
       focus;
 
   function update() {
-     xScale = length / size >= 1 ? length / size : 1;
+     xScale = componentWidth / size >= 1 ? componentWidth / size : 1;
       scale.range([0, size * xScale]);
 
       var now = Date.now();
@@ -45,7 +45,6 @@ cubism.context = function() {
     stop1 = new Date(Math.floor((now - serverDelay) / step) * step);
     start1 = new Date(stop1 - size * step);
     scale.domain([start0, stop0]);
-    console.log('scale.domain: ', start0, stop0);
     return context;
   }
 
@@ -100,9 +99,9 @@ cubism.context = function() {
     return update();
   };
 
-    context.length = function(_) {
-        if (!arguments.length) return length;
-        length = +_;
+    context.componentWidth = function(_) {
+        if (!arguments.length) return componentWidth;
+        componentWidth = +_;
         return update();
     };
   // The server delay is the amount of time we wait for the server to compute a
@@ -801,7 +800,7 @@ cubism_contextPrototype.horizon = function() {
       xScale = context.xScale(),
       mode = "offset",
       buffer = document.createElement("canvas"),
-      width = buffer.width = context.size(),
+      dataSize =  context.size(),
       height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
@@ -810,6 +809,8 @@ cubism_contextPrototype.horizon = function() {
       format = d3.format(".2s"),
       colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
     var rLeft, rWidth;
+    buffer.width = dataSize * xScale;
+
   function horizon(selection) {
 
     selection
@@ -818,7 +819,7 @@ cubism_contextPrototype.horizon = function() {
 
 
     selection.append("canvas")
-        .attr("width", width * xScale)
+        .attr("width", dataSize * xScale)
         .attr("height", height);
 
     selection.append("span")
@@ -857,21 +858,17 @@ cubism_contextPrototype.horizon = function() {
         var i0 = 0, max = Math.max(-extent[0], extent[1]);
         if (this === context) {
           if (max == max_) {
-            i0 = width - (cubism_metricOverlap);
+            i0 = dataSize - (cubism_metricOverlap);
             var dx = (start1 - start) / step;
-              console.log("dx = (start1 - start)/ step", dx, start1, start, step);
-              console.log('width', width);
-            if (dx < width) {
-                buffer.width = width * xScale;
+            if (dx < dataSize) {
+                buffer.width = dataSize * xScale;
               var canvas0 = buffer.getContext("2d");
-                rWidth = width * xScale;
-                console.log("clear canvas0? left, width", 0, rWidth);
+                rWidth = dataSize * xScale;
               canvas0.clearRect(0, 0, rWidth, height);
                 rLeft = dx * xScale;
-                rWidth = (width - dx) * xScale;
-                console.log("draw old canvas? rLeft, rWidth", rLeft, rWidth);
+                rWidth = (dataSize - dx) * xScale;
               canvas0.drawImage(canvas.canvas, rLeft, 0, rWidth, height, 0, 0, rWidth, height);
-                rWidth = width * xScale ;
+                rWidth = dataSize * xScale ;
               canvas.clearRect(0, 0, rWidth, height);
               canvas.drawImage(canvas0.canvas, 0, 0);
             }
@@ -883,7 +880,7 @@ cubism_contextPrototype.horizon = function() {
         scale.domain([0, max_ = max]);
 
         // clear for the new data
-          rWidth = (width - i0) * xScale;
+          rWidth = (dataSize - i0) * xScale;
           rLeft = i0 * xScale;
         canvas.clearRect(rLeft, 0, rWidth, height);
 
@@ -892,7 +889,6 @@ cubism_contextPrototype.horizon = function() {
 
         // positive bands
         var time = new Date();
-        console.log(time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds());
 
         for (var j = 0; j < m; ++j) {
           canvas.fillStyle = colors_[m + j];
@@ -902,7 +898,7 @@ cubism_contextPrototype.horizon = function() {
           scale.range([m * height + y0, y0]);
           y0 = scale(0);
 
-          for (var i = i0, n = width, y1; i < n; ++i) {
+          for (var i = i0, n = dataSize, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
               rLeft = i*xScale;
               rWidth = xScale;
@@ -928,7 +924,7 @@ cubism_contextPrototype.horizon = function() {
             scale.range([m * height + y0, y0]);
             y0 = scale(0);
 
-            for (var i = i0, n = width, y1; i < n; ++i) {
+            for (var i = i0, n = dataSize, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
               canvas.fillRect(i*xScale, scale(-y1), xScale, y0 - scale(-y1));
@@ -940,7 +936,7 @@ cubism_contextPrototype.horizon = function() {
       }
 
       function focus(i) {
-        if (i == null) i = width - 1;
+        if (i == null) i = dataSize - 1;
         var value = metric_.valueAt(i);
         span.datum(value).text(isNaN(value) ? null : format);
       }

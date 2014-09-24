@@ -2,7 +2,7 @@ cubism.context = function() {
   var context = new cubism_context,
       step = 1e4, // ten seconds, in milliseconds
       size = 1440, // four hours at ten seconds, in pixels
-      length = 1440,
+      componentWidth = 1440,
       start0, stop0, // the start and stop for the previous change event
       start1, stop1, // the start and stop for the next prepare event
       serverDelay = 5e3,
@@ -14,7 +14,7 @@ cubism.context = function() {
       focus;
 
   function update() {
-     xScale = length / size >= 1 ? length / size : 1;
+     xScale = componentWidth / size >= 1 ? componentWidth / size : 1;
       scale.range([0, size * xScale]);
 
       var now = Date.now();
@@ -77,9 +77,9 @@ cubism.context = function() {
     return update();
   };
 
-    context.length = function(_) {
-        if (!arguments.length) return length;
-        length = +_;
+    context.componentWidth = function(_) {
+        if (!arguments.length) return componentWidth;
+        componentWidth = +_;
         return update();
     };
   // The server delay is the amount of time we wait for the server to compute a
