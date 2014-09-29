@@ -1,0 +1,24 @@
+{
+  "name": "cubism",
+  "main": "cubism.v1.js",
+  "version": "1.6.1",
+  "homepage": "https://github.com/benFlightStats/cubism",
+  "authors": [
+    "Benjamin Corliss <bcorliss@flightstats.com>"
+  ],
+  "description": "Dynamic timeline charts",
+  "keywords": [
+    "d3",
+    "timeline",
+    "graphing"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
