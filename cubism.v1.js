@@ -681,6 +681,10 @@ cubism_contextPrototype.metric = function(request, name) {
     return values[i];
   };
 
+  metric.values = function() {
+      return values;
+  };
+
   //
   metric.shift = function(offset) {
     return context.metric(cubism_metricShift(request, +offset));
@@ -814,6 +818,7 @@ cubism_contextPrototype.horizon = function() {
   function horizon(selection) {
 
     selection
+        //here focus is being set to mouse x, but other places it corresponds to the data array index.
         .on("mousemove.horizon", function() { context.focus(Math.round(d3.mouse(this)[0])); })
         .on("mouseout.horizon", function() { context.focus(null); });
 
@@ -900,8 +905,8 @@ cubism_contextPrototype.horizon = function() {
 
           for (var i = i0, n = dataSize, y1; i < n; ++i) {
             y1 = metric_.valueAt(i);
-              rLeft = i*xScale;
-              rWidth = xScale;
+              rLeft = Math.round(i*xScale);
+              rWidth = Math.round(xScale);
             if (y1 <= 0) { negative = true; continue; }
             if (y1 === undefined) continue;
             canvas.fillRect(rLeft, y1 = scale(y1), rWidth, y0 - y1);
@@ -927,7 +932,8 @@ cubism_contextPrototype.horizon = function() {
             for (var i = i0, n = dataSize, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
-              canvas.fillRect(i*xScale, scale(-y1), xScale, y0 - scale(-y1));
+              canvas.fillRect(Math.round(i*xScale), scale(-y1),
+                  Math.round(xScale), y0 - scale(-y1));
             }
           }
         }
@@ -935,10 +941,14 @@ cubism_contextPrototype.horizon = function() {
         canvas.restore();
       }
 
-      function focus(i) {
-        if (i == null) i = dataSize - 1;
-        var value = metric_.valueAt(i);
+      function focus(mouse_x) {
+        if (mouse_x == null) mouse_x = dataSize - 1;
+        // since we are getting mouse_x and it's a scaled value,
+        // need to convert this back to an index to look up
+        var index = Math.round(mouse_x/xScale);
+        var value = metric_.valueAt(index);
         span.datum(value).text(isNaN(value) ? null : format);
+          span.style("left", mouse_x+"px");
       }
 
       // Update the chart when the context changes.
@@ -1368,10 +1378,10 @@ cubism_contextPrototype.rule = function() {
       metric_.on("change.rule-" + id, change);
     });
 
-    context.on("focus.rule-" + id, function(i) {
-      line.datum(i)
-          .style("display", i == null ? "none" : null)
-          .style("left", i == null ? null : cubism_ruleLeft);
+    context.on("focus.rule-" + id, function(mouse_x) {
+      line.datum(mouse_x)
+          .style("display", mouse_x == null ? "none" : null)
+          .style("left", mouse_x == null ? null : cubism_ruleLeft);
     });
   }
 
