@@ -411,6 +411,15 @@ cubism_contextPrototype.graphite = function(host) {
     });
   };
 
+  source.find_from_metrics = function(pattern, callback) {
+    d3.json(host + "/render?format=json\&from=-5min"
+        + "&target=" + encodeURIComponent(pattern), function(result) {
+      if (!result) return callback(new Error("unable to find metrics"));
+      callback(null, result.map(function(d) { return d.target; }));
+    });
+  };
+
+
   // Returns the graphite host.
   source.toString = function() {
     return host;
