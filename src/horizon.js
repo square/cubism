@@ -71,7 +71,7 @@ cubism_contextPrototype.horizon = function() {
         }
 
         // update the domain
-        scale.domain([0, max_ = max]);
+        scale.domain([extent[0], max_ = max]);
 
         // clear for the new data
         canvas.clearRect(i0, 0, width - i0, height);
