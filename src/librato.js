@@ -139,7 +139,7 @@ cubism_contextPrototype.librato = function(user, token) {
               }
               data.measurements[0].series.forEach(function(o) { a_values.push(o); });
 
-              var still_more_values = 'query' in data && 'next_time' in data.query;
+              var still_more_values = 'query' in data && 'next_time' in data.query && data.query.next_time !== null;
               if (still_more_values) {
                 actual_request(make_url(data.query.next_time, iedate, step));
               } else {
@@ -160,7 +160,9 @@ cubism_contextPrototype.librato = function(user, token) {
    * The user will use this method to create a cubism source (librato in this case)
    * and call .metric() as necessary to create metrics.
    */
-  source.metric = function(m_composite) {
+  source.metric = function(m_composite, label) {
+    label = typeof label == "undefined" ? (m_composite + "") : label;
+
     return context.metric(function(start, stop, step, callback) {
       /* All the librato logic is here; .fire() retrieves the metrics' data */
       librato_request(m_composite)
@@ -169,7 +171,7 @@ cubism_contextPrototype.librato = function(user, token) {
               cubism_libratoFormatDate(step),
               function(a_values) { callback(null, a_values); });
 
-      }, m_composite += "");
+      }, label);
     };
 
   /* This is not used when the source is librato */
