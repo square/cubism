@@ -3,7 +3,7 @@ JS_COMPILER = ./node_modules/uglify-js/bin/uglifyjs
 
 .PHONY: test
 
-all: cubism.v1.min.js package.json
+all: cubism.v1.min.js
 
 cubism.v1.js: \
 	src/cubism.js \
@@ -15,6 +15,7 @@ cubism.v1.js: \
 	src/librato.js \
 	src/graphite.js \
 	src/gangliaWeb.js \
+	src/opentsdb.js \
 	src/metric.js \
 	src/metric-constant.js \
 	src/metric-operator.js \
@@ -41,7 +42,7 @@ package.json: cubism.v1.js src/package.js
 	@chmod a-w $@
 
 clean:
-	rm -f cubism.v1.js cubism.v1.min.js package.json
+	rm -f cubism.v1.js cubism.v1.min.js
 
 test: all
 	@$(JS_TESTER)
