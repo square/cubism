@@ -15,7 +15,7 @@ util.puts(JSON.stringify({
   "repository": {"type": "git", "url": "http://github.com/square/cubism.git"},
   "main": "./index.js",
   "dependencies": {
-    "d3": "3.x"
+    "d3": "3.5.5"
   },
   "devDependencies": {
     "vows": "0.6.1",
