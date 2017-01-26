@@ -202,7 +202,7 @@ cubism_contextPrototype.horizon = function() {
 
   horizon.format = function(_) {
     if (!arguments.length) return format;
-    format = _;
+    format = d3.format(_);
     return horizon;
   };
 
