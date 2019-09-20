@@ -36,10 +36,10 @@ cubism_contextPrototype.rule = function() {
       metric_.on("change.rule-" + id, change);
     });
 
-    context.on("focus.rule-" + id, function(i) {
-      line.datum(i)
-          .style("display", i == null ? "none" : null)
-          .style("left", i == null ? null : cubism_ruleLeft);
+    context.on("focus.rule-" + id, function(mouse_x) {
+      line.datum(mouse_x)
+          .style("display", mouse_x == null ? "none" : null)
+          .style("left", mouse_x == null ? null : cubism_ruleLeft);
     });
   }
 
