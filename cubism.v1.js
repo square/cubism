@@ -1326,6 +1326,6 @@ function cubism_ruleStyle(line) {
 }
 
 function cubism_ruleLeft(i) {
-  return i + "px";
+  return i + this.parentNode.offsetLeft + "px";
 }
 })(this);
