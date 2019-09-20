@@ -5,6 +5,7 @@ cubism_contextPrototype.horizon = function() {
       width = buffer.width = context.size(),
       height = buffer.height = 30,
       scale = d3.scale.linear().interpolate(d3.interpolateRound),
+      scale_neg = d3.scale.linear().interpolate(d3.interpolateRound),
       metric = cubism_identity,
       extent = null,
       title = cubism_identity,
@@ -71,7 +72,9 @@ cubism_contextPrototype.horizon = function() {
         }
 
         // update the domain
-        scale.domain([0, max_ = max]);
+        max_ = max;
+        scale.domain([0, extent[1]]);
+        scale_neg.domain([0, -extent[0]]);
 
         // clear for the new data
         canvas.clearRect(i0, 0, width - i0, height);
@@ -109,13 +112,13 @@ cubism_contextPrototype.horizon = function() {
 
             // Adjust the range based on the current band index.
             var y0 = (j - m + 1) * height;
-            scale.range([m * height + y0, y0]);
-            y0 = scale(0);
+            scale_neg.range([m * height + y0, y0]);
+            y0 = scale_neg(0);
 
             for (var i = i0, n = width, y1; i < n; ++i) {
               y1 = metric_.valueAt(i);
               if (y1 >= 0) continue;
-              canvas.fillRect(i, scale(-y1), 1, y0 - scale(-y1));
+              canvas.fillRect(i, scale_neg(-y1), 1, y0 - scale_neg(-y1));
             }
           }
         }
@@ -185,6 +188,7 @@ cubism_contextPrototype.horizon = function() {
   horizon.scale = function(_) {
     if (!arguments.length) return scale;
     scale = _;
+    scale_neg = _;
     return horizon;
   };
 
