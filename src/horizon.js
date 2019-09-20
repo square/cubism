@@ -9,7 +9,8 @@ cubism_contextPrototype.horizon = function() {
       extent = null,
       title = cubism_identity,
       format = d3.format(".2s"),
-      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
+      colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"],
+      hideEmpty = false;
 
   function horizon(selection) {
 
@@ -138,6 +139,16 @@ cubism_contextPrototype.horizon = function() {
       // Note that someone still needs to listen to the metric,
       // so that it continues to update automatically.
       metric_.on("change.horizon-" + id, function(start, stop) {
+
+        // Hide graphs if the retrieved data set is empty
+        if (hideEmpty) {
+          if (d.valueAll().length == 0) {
+            selection.style("display", "none");
+          } else {
+            selection.style("display", "block");
+          }
+        }
+
         change(start, stop), focus();
         if (ready) metric_.on("change.horizon-" + id, cubism_identity);
       });
@@ -209,6 +220,12 @@ cubism_contextPrototype.horizon = function() {
   horizon.colors = function(_) {
     if (!arguments.length) return colors;
     colors = _;
+    return horizon;
+  };
+
+  horizon.hideEmpty = function(_) {
+    if (!arguments.length) return hideEmpty;
+    hideEmpty = _;
     return horizon;
   };
 
